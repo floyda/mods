@@ -1,0 +1,53 @@
+{
+  "name": "cache-countdown",
+  "version": "0.1.0",
+  "description": "Counts down to the prompt cache going cold, writes a handoff while you are away, and when the cache is cold offers to resume from the handoff or send with full context.",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "cacheTtl": {
+      "type": "string",
+      "title": "Prompt cache TTL",
+      "description": "How long the prompt cache stays warm after a request. auto uses what the engine reports or what this mod learned from past cache hits and misses, else 1h.",
+      "options": [
+        "auto",
+        "5m",
+        "1h"
+      ],
+      "default": "auto"
+    },
+    "warnSeconds": {
+      "type": "number",
+      "title": "Warn this many seconds before it goes cold",
+      "description": "When the countdown band, toast and sound appear.",
+      "default": 120
+    },
+    "askWhenCold": {
+      "type": "boolean",
+      "title": "Ask before sending into a cold cache",
+      "description": "On the first prompt after the cache went cold, ask whether to resume from a handoff or send with full context.",
+      "default": true
+    },
+    "whenAway": {
+      "type": "string",
+      "title": "When you are away",
+      "description": "handoff: a minute before the cache goes cold, if you have not typed for a while, write a handoff (one request over the still-warm cache) so you can resume from it later. off: only warn.",
+      "options": [
+        "handoff",
+        "off"
+      ],
+      "default": "handoff"
+    },
+    "awaySeconds": {
+      "type": "number",
+      "title": "Away after this many seconds without typing",
+      "description": "How long without typing in the prompt box counts as away.",
+      "default": 180
+    },
+    "sound": {
+      "type": "boolean",
+      "title": "Play a sound on warning and on going cold",
+      "default": true,
+      "description": "A short chime when the warning starts and another when the cache goes cold (macOS plays it)."
+    }
+  }
+}

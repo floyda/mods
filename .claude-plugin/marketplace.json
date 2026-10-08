@@ -1,0 +1,11 @@
+{
+  "name": "mods",
+  "owner": { "name": "Andy Floyd" },
+  "plugins": [
+    {
+      "name": "cache-countdown",
+      "source": "./cache-countdown",
+      "description": "Counts down to the prompt cache going cold, warns before it does, and when it has, offers to send with full context or compress the session first."
+    }
+  ]
+}
