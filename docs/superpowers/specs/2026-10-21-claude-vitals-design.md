@@ -4,7 +4,7 @@ Date: 2026-10-21 · Status: approved in conversation, awaiting written-spec revi
 
 ## Intent
 
-A Claude Code mod that draws a live sidebar beside the conversation, styled after the Claude Code Desktop app's session panel (rounded, collapsible cards; a stacked, colour-keyed context bar with a legend). It shows, for the current session: prompt-cache state, context-window use by category, session spend, today's usage across all sessions (via ccusage), the files Claude edited and the repo's uncommitted changes (each openable in Zed at the changed line), and background tasks.
+A Claude Code mod that draws a live sidebar beside the conversation, styled after the Claude Code Desktop app's session panel (rounded, collapsible cards; a colour-keyed context breakdown with a legend), drawn with real pixel graphics in kitty and Ghostty and a pixel claw character that reacts to the session. It shows, for the current session: prompt-cache state, context-window use by category, session spend, today's usage across all sessions (via ccusage), the files Claude edited and the repo's uncommitted changes (each openable in Zed at the changed line), and background tasks.
 
 It must work under Ghostty and kitty. It does so by being drawn by Claude Code itself (a docked `Pane`), not by scripting either terminal.
 
@@ -19,6 +19,8 @@ It must work under Ghostty and kitty. It does so by being drawn by Claude Code i
 | Placement | Native docked pane inside Claude Code (needs the fullscreen layout, ≥110 columns) |
 | Cards | All of: header, Cache, Context, Usage, Outputs, Changes, Background tasks |
 | Name | `claude-vitals`; command `/vitals` |
+| Colour and graphics | All in: real pixel graphics in kitty and Ghostty (context ring, gradient pills, sparkline chart, animated cache bar), 24-bit colour text everywhere else, dark and light palettes |
+| Character | The pixel claw from cache-countdown lives in the header and reacts to session health, Claude working, celebrations and idle time |
 
 ### Non-goals
 
@@ -33,9 +35,15 @@ It must work under Ghostty and kitty. It does so by being drawn by Claude Code i
 
 A stack of rounded cards (`Box` with `borderStyle: 'round'`), docked right, about 46 columns wide. Every card except the header collapses from its title row (chevron `⌄` / `›`); the collapsed set persists across sessions.
 
+The sketch below is the text-mode layout; `▒` marks where pixel mode draws a picture (see Visual design). Colour is described in Visual design, not here.
+
 ```
 ╭─────────────────────────────────────────────╮
-│ Opus 5.5 · main · ~/Workspace/mods          │
+│ ▒▒▒▒▒▒▒▒▒▒▒▒▒▒  Opus 5.5                    │
+│ ▒▒▒▒▒▒▒▒▒▒▒▒▒▒  main · ~/Workspace/mods     │
+│ ▒▒ character ▒  working                     │
+│ ▒▒▒▒▒▒▒▒▒▒▒▒▒▒                              │
+│ ▒▒▒▒▒▒▒▒▒▒▒▒▒▒                              │
 ╰─────────────────────────────────────────────╯
 ╭─ Cache ⌄ ───────────────────────────────────╮
 │ ● warm                          cold in 52:10│
@@ -78,7 +86,7 @@ A stack of rounded cards (`Box` with `borderStyle: 'round'`), docked right, abou
 
 ### Card contents
 
-**Header**: the session model (`$.session.model()`), the git branch (`git rev-parse --abbrev-ref HEAD`, run by the files source; left out outside a repo), and the working directory with the home directory shortened to `~`. Not collapsible.
+**Header**: the character (14 × 5 cells, see Visual design → Character) on the left. To its right, one per line: the session model (`$.session.model()`); the git branch (`git rev-parse --abbrev-ref HEAD`, run by the files source; left out outside a repo) and the working directory with the home directory shortened to `~`; the mood label (`working`, `cache cold`, `context 84%`, `limit 5h 91%`, `asleep`, or nothing when content). Not collapsible. With `character` off, the header is the text lines alone.
 
 **Cache**
 - State: `● warm` or `○ cold`, and `cold in mm:ss` while warm.
@@ -90,17 +98,18 @@ A stack of rounded cards (`Box` with `borderStyle: 'round'`), docked right, abou
 
 **Context**
 - Headline: `context.breakdown.percentage`% used, `totalTokens / rawMaxTokens` formatted (`141.6k / 1M`).
-- Bar: one row as wide as the card body; each `used` and `buffer` category gets a run of cells proportional to its tokens, painted with its `color` theme key; the rest is `free`, painted dim. Drawn as `Text` runs of `█`, or as a `Raster` if `Text` runs prove too coarse.
+- Pixel mode: a ring left of the headline (see Visual design → Pixel elements) replaces the bar.
+- Text mode: a bar one row as wide as the card body; each `used` and `buffer` category gets a run of `━` cells proportional to its tokens (at least one cell each), in its palette colour; the rest is `free`, painted dim.
 - Legend: one row per `used`, `buffer` and `free` category in the engine's order (`■` in its colour, name, tokens, percentage of `rawMaxTokens`).
 - `deferred` categories are not in the bar or legend; they collapse into one expandable row (`› MCP tools N · deferred X`) that lists them.
 - Count: `$.session.usage({ breakdown: 'summary' })` (free, local). Hotkey `f` asks once for `breakdown: 'full'` (token-count requests, as `/context` sends) and marks the card `exact` until the next refresh.
 
 **Usage**
 - `Session`: `usage.cost.usd`.
-- `Today`: today's total cost (local time zone) from ccusage, with a 7-cell sparkline (`▁▂▃▄▅▆▇█`) of the last 7 days' totals, today rightmost.
+- `Today`: today's total cost (local time zone) from ccusage, with a sparkline of the last 7 days' totals, today rightmost and highlighted (pixel mode: a small bar chart; text mode: `▁▂▃▄▅▆▇█`).
 - Per-model line: today's cost by model family (Fable, Opus, Sonnet, Haiku), largest first, families with $0 left out.
 - `5h block`: from the active ccusage block: time left, cost per hour, projected block total. Line omitted when no block is active.
-- `Limit 5h` / `Limit 7d` (and `Spend limit` if present): from `usage.rateLimits` (`five_hour`, `seven_day`, `spend_limit`): a 10-cell bar, `percentUsed`, and `resetsAt` as a local time (today) or weekday (later). Rows omitted when `rateLimits` is empty (API key, or before the first response).
+- `Limit 5h` / `Limit 7d` (and `Spend limit` if present): from `usage.rateLimits` (`five_hour`, `seven_day`, `spend_limit`): a 10-cell bar (pixel mode: a gradient pill), `percentUsed`, and `resetsAt` as a local time (today) or weekday (later). Rows omitted when `rateLimits` is empty (API key, or before the first response).
 - Footer, dim, only when relevant: `updated 2m ago` while the last ccusage figures are older than its refresh period, or the ccusage failure line (see Failure handling).
 
 **Outputs**: one row per file Claude (main loop or any subagent) wrote or edited this session, newest edit first.
@@ -117,6 +126,58 @@ A stack of rounded cards (`Box` with `borderStyle: 'round'`), docked right, abou
 - Finished agents: one row, `◇ N finished`.
 - Read-only.
 
+## Visual design
+
+### Palette
+
+- Two palettes, dark and light, in `graphics/palette.ts`. The mod picks one from the `theme` row of `$.config.list()`: a theme whose name contains `light` gets the light palette, every other the dark. Re-read on `config.set` for `theme`.
+- Everything is drawn in the palette's 24-bit colours, not theme keys, because pictures need real RGB values and the ring and its legend must agree. The context categories get fixed colours close to `/context`'s default dark theme (Messages blue, Memory files orange, System tools green, Skills amber, System prompt and MCP grey, buffer mid-grey, free a dark track), keyed by the category's `name` with a grey fallback for an unknown one.
+- Colour carries meaning, the same everywhere:
+  - teal: cache warm;
+  - the heat ramp, green → amber → red: anything filling toward a limit (cache urgency, limit pills, the context headline from 80%);
+  - green and red: lines added and removed;
+  - clay (`#d97757`): Claude (the character, the Opus dot);
+  - violet: background tasks;
+  - blue: selection and links.
+- Card chrome: borders a dim neutral; each title bold in its card's accent (Cache teal, Context blue, Usage amber, Outputs green, Changes and Background tasks violet); card bodies filled one step lighter than the pane; the selected row a blue wash; rows and titles lift with a hover wash (`hover` props, no hook round trip).
+
+### Two render modes
+
+- **pixels**: the character, ring, pills and sparkline are `Image` elements whose RGBA pixels the mod paints itself (`{ rgba, width, height }`: no PNG encoding). Smooth shapes are painted anti-aliased at 16 × 32 px per cell so the terminal only scales down; the character is painted at 8× with nearest-neighbour so its pixel edges stay sharp. Every `Image` carries `alt` text, the text-mode figure.
+- **text**: the same layout in 24-bit colour `Text`, with half-block `Raster` cells for the character (as cache-countdown draws its claw).
+- The `graphics` setting chooses: `auto` uses pixels when the terminal is kitty (`TERM=xterm-kitty` or `KITTY_WINDOW_ID` set) or Ghostty (`TERM_PROGRAM=ghostty`), else text; `pixels` and `text` force one.
+
+### Pixel elements
+
+| Element | Cells | Drawing |
+|---|---|---|
+| Character | 14 × 5 | the claw sprite family (14 × 10 px grid) at 8×, nearest-neighbour |
+| Context ring | 10 × 5 | a donut: one arc per `used` and `buffer` category, clockwise from 12 o'clock in the engine's order, the rest a dark track. Right of it, three lines: `14% used`, `141.6k / 1M`, `estimate` or `exact` |
+| Cache pill | 30 × 1 | rounded ends; the filled share is the TTL left. The fill moves along the heat ramp: teal while more than 25% is left, amber under 25%, red under 10%. A soft highlight sweeps along it every 3 s while warm; it pulses once a second in the last 2 minutes |
+| Limit pills | 10 × 1 each | filled to `percentUsed`, the fill a heat gradient along its length; dark track |
+| Sparkline | 8 × 2 | 7 rounded bars scaled to the week's largest day; today's bright, the rest muted |
+
+### Animation
+
+- Animated pictures are keyed and repainted in place with `$.ui.blit`, never by re-rendering the pane.
+- One frame clock (`graphics/animator.ts`) at up to 8 frames a second. It runs only while the pane is open and something is animating, and stops otherwise.
+- With `animations` off, every element draws its resting frame and the clock never starts.
+
+### Character
+
+The claw from cache-countdown's `claw.ts` (its 14 × 10 grid, colours, and its sweating and frost overlays), copied into `graphics/sprite.ts` and extended with new frames. Its mood comes from a pure function of the session's state (`mood.ts`); when several apply, the first in this table wins:
+
+| Mood | When | Frames |
+|---|---|---|
+| cold | the cache is cold, after at least one response | icy blue body with frost; a one-frame shiver every 5 s |
+| sweating | context ≥ 80%, or any rate-limit window ≥ 80% | the sweat drop, two frames at 2 fps |
+| working | between `turn.start` and `turn.complete` | claws clack, two frames at 4 fps |
+| celebrating | for 4 s after a `turn.complete` whose turn added or changed an Outputs row, or after a background task finishes | sparkles twinkle, three frames at 6 fps |
+| asleep | no typing, turn or tool activity for 10 minutes | eyes shut, a Z rises, three frames at 1 fps |
+| content | otherwise | eyes open; a one-frame blink at a random 4–7 s interval |
+
+Typing in the prompt (`prompt.edit`) or a turn starting wakes it at once.
+
 ## Architecture
 
 ```
@@ -130,6 +191,13 @@ claude-vitals/
   hooks/sources/ccusage.ts     run ccusage, parse JSON → today, per-model, 7-day series, active block
   hooks/sources/files.ts       Outputs from tool calls; Changes and the header's branch from git
   hooks/sources/tasks.ts       agent.list → running / finished
+  hooks/sources/activity.ts    turns, typing, celebrations → activity atom (working, last active, celebrate until)
+  hooks/mood.ts                pure: vitals + activity → mood, by the priority table
+  hooks/graphics/palette.ts    dark and light palettes, heat ramp, category colours
+  hooks/graphics/canvas.ts     RGBA buffer: fill, anti-aliased pill, arc and ring, gradients → base64
+  hooks/graphics/sprite.ts     claw frames (from cache-countdown, extended) → RGBA, or half-block Raster cells
+  hooks/graphics/pictures.ts   ring, pills, sparkline, character → Image props (pixels) or Text/Raster (text)
+  hooks/graphics/animator.ts   the frame clock: animated keys, blits, stops when idle
   hooks/pricing.ts             per-model price table (copied from cache-countdown)
   hooks/editor.ts              resolve Zed's CLI; open path:line
   hooks/cards/*.tsx            Header, Cache, Context, Usage, Outputs, Changes, Tasks: pure components
@@ -158,6 +226,10 @@ Rules that keep units independent:
 | Timer, 1 s, only while the pane is open | The cache countdown text (an atom holding "now") |
 | Timer, 2 s, only while some agent is running | Tasks |
 | `r` (pane hotkey), Retry button | ccusage now |
+| `turn.start` / `turn.complete` | Activity: working on and off; on complete, a celebration if this turn added or changed an Outputs row |
+| `prompt.edit` | Activity: last active (wakes the character) |
+| Tasks refresh sees an agent finish | Activity: a celebration |
+| `config.set` for `theme` | Palette |
 | `f` (pane hotkey) | Context with `breakdown: 'full'` |
 
 **Cache TTL**: the engine's `cache_ttl` when an event reports one (the model-switch hook inputs carry `cache_ttl` and `prompt_cache_warm`). Otherwise inferred: a response after an idle gap of more than 5 minutes that still reads from cache means 1 h; one after a gap of between 5 minutes and 1 h with no cache read means 5 m. Default 1 h. Warm means `now < lastRequestAt + TTL`.
@@ -176,7 +248,7 @@ The command prefix is the `ccusageCommand` setting, split on whitespace. A run i
 
 - `session.start`: when `autoOpen` is on, the terminal reports fullscreen, and the viewport is at least 144 columns, `$.ui.open({ id: 'vitals', title: 'Vitals', columns })`. Narrower, nothing opens on its own.
 - `/vitals` toggles the pane at any width (a pane the person asks for docks from 110 columns, and the engine then also allows the mod's own opens from 110).
-- Under 110 columns or outside fullscreen the engine seats the pane inline above the prompt. The pane render then switches to **compact** mode: the header plus one line per card, e.g. `Context 14% · Cache warm 52:10 · Today $38.90 · 3 outputs · ± 12 files · 1 task`.
+- Under 110 columns or outside fullscreen the engine seats the pane inline above the prompt. The pane render then switches to **compact** mode: the header's text lines plus one line per card, e.g. `Context 14% · Cache warm 52:10 · Today $38.90 · 3 outputs · ± 12 files · 1 task`. Compact mode draws no pictures and no character, and starts no animation.
 
 ## Interaction
 
@@ -206,6 +278,7 @@ Every failure stays inside its card; nothing blocks the session or throws out of
 | Edited file deleted since | Row dimmed, `deleted`, not openable |
 | `rateLimits` empty | Limit rows hidden |
 | Breakdown unavailable | Context falls back to `context.percent`, `tokens / window` with no legend |
+| `graphics: pixels` in a terminal that cannot draw images | Each picture shows its `alt` text (the text-mode figure) in its place |
 
 ## Settings (`userConfig`)
 
@@ -216,6 +289,9 @@ Every failure stays inside its card; nothing blocks the session or throws out of
 | `zedPath` | string | `""` | Zed CLI path; empty = auto-detect |
 | `ccusageCommand` | string | `"ccusage"` | How to run ccusage, e.g. `npx -y ccusage@20` |
 | `ccusageRefreshSeconds` | number | `300` | Background ccusage refresh period (plus after each turn, at most every 30 s) |
+| `graphics` | `auto` \| `pixels` \| `text` | `auto` | Pixel pictures in kitty and Ghostty, coloured text elsewhere; or force one |
+| `character` | boolean | `true` | Show the claw in the header |
+| `animations` | boolean | `true` | Animate the character and the cache pill; off draws resting frames |
 
 ## Testing
 
@@ -229,6 +305,10 @@ Tests come first (TDD), run with `claude plugin test claude-vitals`, in the styl
   - next-turn pricing
   - Zed resolution order
   - the ccusage parsers, against fixtures captured from a real ccusage v20 run
+  - `mood.ts`: every row of the priority table, and each pair of overlapping moods
+  - `canvas.ts`: pixels at known points (a ring arc at a known angle has its category's colour; a pill's fill ends where its share says; anti-aliased edges are partial alpha)
+  - `sprite.ts`: every frame is 14 × 10 and differs from content only where its overlay says
+  - palette choice from the `theme` row, and graphics mode from the environment
 - **Cards**: `$.ui.mount` on the `terminal` surface with seeded atoms:
   - text and order of rows
   - collapse/expand and persistence
@@ -242,6 +322,9 @@ Tests come first (TDD), run with `claude plugin test claude-vitals`, in the styl
   - API-key mode (no `rateLimits`) hides limit rows
   - auto-open only at ≥ 144 columns and fullscreen
   - `/vitals` toggles
+  - pixel mode draws `Image` elements with alt text; text mode draws none
+  - the animator blits on the mock clock while the character works, and stops after `turn.complete` once the celebration ends
+  - `animations: false` starts no timer
 - **Static**: `claude plugin validate claude-vitals` and `tsc --noEmit` clean.
 - **Live** (manual, recorded in the plan's last task), in kitty, fullscreen, ~160 columns, with ccusage installed:
   - the pane auto-opens
@@ -249,6 +332,8 @@ Tests come first (TDD), run with `claude plugin test claude-vitals`, in the styl
   - clicking an Outputs row opens Zed at the right line
   - `r` refreshes Usage
   - `/vitals` toggles
+  - the ring, pills and character are sharp; the character clacks during a turn, celebrates after one that saved a file, and frosts when the cache goes cold
+  - with the theme switched to light, the light palette is used
   - Ghostty is not installed on this machine; the live check there waits until it is. Nothing in the design is kitty-specific.
 
 ## Assumptions to verify in the plan's first task
@@ -260,3 +345,6 @@ Each has a stated fallback, so none blocks the design.
 3. **Atom updates redraw an open Pane** (cache-countdown's band relies on this). Fallback: `$.ui.invalidate` after each atom write.
 4. **`structuredPatch` is present on Edit/MultiEdit/Write results seen by a `tool.call` hook.** Fallback: count from the tool input (`old_string`/`new_string` line counts) and take the line from a post-edit search for `new_string` in the file.
 5. **`$.agent.list()` statuses distinguish running from finished.** Fallback: treat agents seen in `agent.spawn` and not yet reported complete as running.
+6. **`Image` draws inside a docked Pane in kitty and Ghostty, and `$.ui.blit` on Images keeps up at 8 fps.** Fallback: lower the frame rate, or draw the animated elements as `Raster` cells.
+7. **The mod can read `TERM`, `TERM_PROGRAM` and `KITTY_WINDOW_ID`.** Fallback: `auto` means text, and the `graphics` setting turns pixels on.
+8. **Painting at 8× (character) and 16 × 32 px per cell (shapes) looks sharp after the terminal scales it.** Fallback: paint at the terminal's cell size if the API reports it, or draw the character as half-block `Raster` cells in pixel mode too.
