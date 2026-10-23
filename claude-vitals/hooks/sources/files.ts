@@ -1,15 +1,12 @@
-import { read, update } from 'claude-code'
-import type { EngineInterface } from 'claude-code'
 
-import type { ChangeRow, ChangesState, OutputRow } from '../../types'
+import type { OutputRow } from '../../types'
 import { lineCount } from '../format'
-import * as S from '../state'
 
 /** The tree with nothing in it: what a repository with no commits yet is compared against. */
 export const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
 export const GIT_TIMEOUT_MS = 5_000
 export const OUTPUT_LIMIT = 200
-const UNTRACKED_LIMIT = 50
+export const UNTRACKED_LIMIT = 50
 
 export type EditFacts = { path: string; added: number; removed: number; line: number }
 type Hunk = { newStart: number; lines: readonly string[] }
@@ -114,51 +111,4 @@ export function parseFirstLines(diff: string): Map<string, number> {
     }
   }
   return firsts
-}
-
-/** Reads the repository's uncommitted changes (and the branch) into the changes atom. */
-export async function refreshChanges($: EngineInterface): Promise<void> {
-  const git = (args: string[]) => $.process.run(['git', ...args], { timeoutMs: GIT_TIMEOUT_MS })
-  try {
-    const top = await git(['rev-parse', '--show-toplevel'])
-    if (top.exitCode !== 0) {
-      await update($, S.changes, (): ChangesState => ({ status: 'not-git', branch: null, files: [] }))
-      return
-    }
-    const root = top.stdout.trim()
-    const branch = (await git(['symbolic-ref', '--short', '-q', 'HEAD'])).stdout.trim() || null
-    const hasHead = (await git(['rev-parse', '--verify', '-q', 'HEAD'])).exitCode === 0
-    const base = hasHead ? 'HEAD' : EMPTY_TREE
-    const stats = parseNumstat((await git(['diff', '--numstat', base])).stdout)
-    const firsts = parseFirstLines((await git(['diff', '-U0', '--no-color', '--no-ext-diff', base])).stdout)
-    const untracked = (await git(['ls-files', '--others', '--exclude-standard'])).stdout
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line !== '')
-    const files: ChangeRow[] = stats.map(stat => ({
-      path: `${root}/${stat.path}`,
-      added: stat.added,
-      removed: stat.removed,
-      line: firsts.get(stat.path) ?? 1,
-    }))
-    for (const relative of untracked.slice(0, UNTRACKED_LIMIT)) {
-      const text = await $.fs.read(`${root}/${relative}`).catch(() => '')
-      files.push({ path: `${root}/${relative}`, added: lineCount(typeof text === 'string' ? text : ''), removed: 0, line: 1 })
-    }
-    await update($, S.changes, (): ChangesState => ({ status: 'ok', branch, files }))
-  } catch {
-    await update($, S.changes, (current): ChangesState => ({ ...current, status: 'timeout' }))
-  }
-}
-
-/** Marks Outputs rows whose file is gone. */
-export async function checkDeleted($: EngineInterface): Promise<void> {
-  const rows = await read($, S.outputs)
-  const gone = new Set<string>()
-  for (const row of rows) {
-    const exists = await $.fs.exists(row.path).catch(() => true)
-    if (!exists) gone.add(row.path)
-  }
-  if (rows.every(row => row.isDeleted === gone.has(row.path))) return
-  await update($, S.outputs, list => list.map(row => ({ ...row, isDeleted: gone.has(row.path) })))
 }

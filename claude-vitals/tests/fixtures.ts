@@ -1,3 +1,5 @@
+import type { SessionUsage } from 'claude-code'
+
 // Canned engine answers for the tests. ccusage's shapes are 20.0.40's own; the figures are made up.
 
 const day = (date: string, totalCost: number, modelBreakdowns: unknown[] = []) => ({
@@ -92,3 +94,62 @@ export const DIFF_U0 = [
   '-a',
   '',
 ].join('\n')
+
+export const HOME = '/Users/me'
+export const CWD = '/Users/me/Workspace/mods'
+/** 14:00 UTC on Wednesday 21 October 2026: 15:00 in the zone `date +%z` reports (+0100). */
+export const START = Date.parse('2026-10-21T14:00:00Z')
+
+export const CATEGORIES = [
+  { name: 'Messages', tokens: 83_600, color: 'promptBorder', isDeferred: false, kind: 'used' },
+  { name: 'Memory files', tokens: 30_000, color: 'claude', isDeferred: false, kind: 'used' },
+  { name: 'System tools', tokens: 16_700, color: 'success', isDeferred: false, kind: 'used' },
+  { name: 'Skills', tokens: 7_900, color: 'warning', isDeferred: false, kind: 'used' },
+  { name: 'Autocompact buffer', tokens: 33_000, color: 'inactive', isDeferred: false, kind: 'buffer' },
+  { name: 'Free space', tokens: 824_900, color: 'inactive', isDeferred: false, kind: 'free' },
+  { name: 'MCP tools (deferred)', tokens: 38_300, color: 'inactive', isDeferred: true, kind: 'deferred' },
+]
+
+export type LimitFixture = { kind: string; percentUsed: number; resetsAt?: string }
+
+export const LIMITS: LimitFixture[] = [
+  { kind: 'five_hour', percentUsed: 46, resetsAt: '2026-10-21T16:00:00Z' },
+  { kind: 'seven_day', percentUsed: 22, resetsAt: '2026-10-26T08:00:00Z' },
+]
+
+/** `$.session.usage()` as the engine answers it, with the window `percent` full. */
+export function usageFixture(options: { percent?: number; limits?: LimitFixture[]; costUsd?: number } = {}): SessionUsage {
+  const percent = options.percent ?? 14
+  const tokens = percent * 10_000
+  return {
+    startedAt: START - 3_600_000,
+    context: {
+      tokens,
+      window: 1_000_000,
+      percent,
+      breakdown: {
+        categories: CATEGORIES,
+        totalTokens: tokens,
+        maxTokens: 1_000_000,
+        rawMaxTokens: 1_000_000,
+        percentage: percent,
+        gridRows: [],
+        model: 'claude-opus-5-5',
+      },
+    },
+    rateLimits: options.limits ?? LIMITS,
+    cost: { usd: options.costUsd ?? 4.12 },
+  } as unknown as SessionUsage
+}
+
+/** One main-thread response: 180k tokens re-sent next turn, 95% of input read from cache. */
+export const STEP_USAGE = {
+  model: 'claude-opus-5-5',
+  input_tokens: 10,
+  output_tokens: 500,
+  cache_read_input_tokens: 170_000,
+  cache_creation_input_tokens: 9_490,
+}
+
+/** The patch an Edit returns in these tests: +2 −1, first change at line 12. */
+export const EDIT_HUNK = { oldStart: 10, oldLines: 4, newStart: 10, newLines: 5, lines: [' a', ' b', '-c', '+C', '+D', ' e'] }

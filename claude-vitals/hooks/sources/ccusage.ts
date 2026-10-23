@@ -1,9 +1,5 @@
-import { read, update } from 'claude-code'
-import type { EngineInterface } from 'claude-code'
 
-import type { CcusageBlock, CcusageState, CcusageToday, ModelSpend } from '../../types'
-import { localDate } from '../format'
-import * as S from '../state'
+import type { CcusageBlock, CcusageToday, ModelSpend } from '../../types'
 
 export const CCUSAGE_TIMEOUT_MS = 20_000
 /** After a turn, ccusage runs again only once this long has passed since it last started. */
@@ -92,62 +88,10 @@ export function ccusageArgv(command: string, report: readonly string[]): string[
 
 export type CcusageRun = { isOk: true; stdout: string } | { isOk: false; status: 'missing' | 'failed'; error: string }
 
-function firstLine(text: string): string | null {
+export function firstLine(text: string): string | null {
   const line = text
     .split('\n')
     .map(part => part.trim())
     .find(part => part !== '')
   return line === undefined ? null : line.slice(0, 120)
-}
-
-/** One ccusage report. A run that cannot start is `missing`; one that exits non-zero or times out is `failed`. */
-export async function runCcusage($: EngineInterface, command: string, report: readonly string[]): Promise<CcusageRun> {
-  const startedAt = await $.clock.now()
-  try {
-    const { exitCode, stdout, stderr } = await $.process.run(ccusageArgv(command, report), { timeoutMs: CCUSAGE_TIMEOUT_MS })
-    if (exitCode !== 0) return { isOk: false, status: 'failed', error: firstLine(stderr) ?? `exit code ${exitCode}` }
-    return { isOk: true, stdout }
-  } catch {
-    const took = (await $.clock.now()) - startedAt
-    if (took >= CCUSAGE_TIMEOUT_MS - 1000) return { isOk: false, status: 'failed', error: 'timed out after 20s' }
-    return { isOk: false, status: 'missing', error: 'not found' }
-  }
-}
-
-let isRunning = false
-
-/** Reads today's spend, the week and the active block into the ccusage atom; the last good figures stay while it runs. */
-export async function refreshCcusage($: EngineInterface, command: string): Promise<void> {
-  if (isRunning) return
-  isRunning = true
-  try {
-    const now = await $.clock.now()
-    const { tzOffsetMin } = await read($, S.place)
-    await update($, S.ccusage, (s): CcusageState => ({ ...s, status: s.status === 'ok' ? 'ok' : 'running', lastStartedAt: now }))
-    const today = localDate(now, tzOffsetMin)
-    const since = compactDate(shiftDate(today, -6))
-    const daily = await runCcusage($, command, ['daily', '--json', '--breakdown', '--offline', '--since', since])
-    if (!daily.isOk) {
-      await update($, S.ccusage, (s): CcusageState => ({ ...s, status: daily.status, error: daily.error }))
-      return
-    }
-    const figures = parseDaily(daily.stdout, today)
-    if (figures === null) {
-      await update($, S.ccusage, (s): CcusageState => ({ ...s, status: 'failed', error: 'unexpected output from ccusage daily' }))
-      return
-    }
-    const blocks = await runCcusage($, command, ['blocks', '--active', '--json', '--offline'])
-    const block = blocks.isOk ? (parseBlocks(blocks.stdout) ?? null) : null
-    await update($, S.ccusage, (s): CcusageState => ({
-      ...s,
-      status: 'ok',
-      error: null,
-      updatedAt: now,
-      today: figures.today,
-      week: figures.week,
-      block,
-    }))
-  } finally {
-    isRunning = false
-  }
 }

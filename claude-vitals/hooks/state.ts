@@ -1,5 +1,3 @@
-import { atom } from 'claude-code'
-
 import type {
   ActivityState,
   CacheState,
@@ -58,15 +56,3 @@ export const INITIAL_VIEW: ViewState = {
   mode: 'text',
 }
 export const INITIAL_PLACE: PlaceState = { cwd: '', home: null, tzOffsetMin: 0 }
-
-export const cache = atom({ plugin: 'vitals', key: 'cache' } as const, INITIAL_CACHE)
-export const context = atom({ plugin: 'vitals', key: 'context' } as const, INITIAL_CONTEXT)
-export const spend = atom({ plugin: 'vitals', key: 'spend' } as const, INITIAL_SPEND)
-export const ccusage = atom({ plugin: 'vitals', key: 'ccusage' } as const, INITIAL_CCUSAGE)
-export const outputs = atom({ plugin: 'vitals', key: 'outputs' } as const, [] as OutputRow[])
-export const changes = atom({ plugin: 'vitals', key: 'changes' } as const, INITIAL_CHANGES)
-export const tasks = atom({ plugin: 'vitals', key: 'tasks' } as const, INITIAL_TASKS)
-export const activity = atom({ plugin: 'vitals', key: 'activity' } as const, INITIAL_ACTIVITY)
-export const view = atom({ plugin: 'vitals', key: 'view' } as const, INITIAL_VIEW)
-export const place = atom({ plugin: 'vitals', key: 'place' } as const, INITIAL_PLACE)
-export const now = atom({ plugin: 'vitals', key: 'now' } as const, 0)

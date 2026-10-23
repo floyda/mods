@@ -1,0 +1,68 @@
+import type { RenderElement } from 'claude-code'
+
+import type {
+  ActivityState,
+  CacheState,
+  CcusageState,
+  ChangesState,
+  ContextState,
+  OutputRow,
+  PlaceState,
+  SpendState,
+  TasksState,
+  ViewState,
+} from '../types'
+import { cacheCard } from './cards/cache'
+import { headerCard } from './cards/header'
+import type { Kit } from './cards/kit'
+import { homePath } from './format'
+import { frameAt } from './graphics/sprite'
+import { moodLabel, moodOf } from './mood'
+import type { MoodInput } from './mood'
+import { cacheView } from './sources/cache'
+
+export type PaneData = {
+  cache: CacheState
+  context: ContextState
+  spend: SpendState
+  ccusage: CcusageState
+  outputs: OutputRow[]
+  changes: ChangesState
+  tasks: TasksState
+  activity: ActivityState
+  view: ViewState
+  place: PlaceState
+  now: number
+}
+
+export type PaneSettings = { showCharacter: boolean; refreshMs: number }
+
+export function moodInput(d: PaneData): MoodInput {
+  return {
+    cache: cacheView(d.cache, d.now).status,
+    contextPercent: d.context.percent,
+    limits: d.spend.limits,
+    isWorking: d.activity.isWorking,
+    celebrateUntil: d.activity.celebrateUntil,
+    lastActiveAt: d.activity.lastActiveAt,
+    now: d.now,
+  }
+}
+
+/** The docked sidebar's cards, top to bottom. */
+export function paneCards(kit: Kit, d: PaneData, s: PaneSettings): RenderElement[] {
+  const input = moodInput(d)
+  const mood = moodOf(input)
+  return [
+    headerCard(kit, {
+      model: d.context.model ?? d.cache.model,
+      branch: d.changes.branch,
+      place: homePath(d.place.cwd, d.place.home),
+      mood,
+      frame: frameAt(mood, d.now),
+      label: moodLabel(mood, input),
+      showCharacter: s.showCharacter,
+    }),
+    cacheCard(kit, cacheView(d.cache, d.now)),
+  ]
+}

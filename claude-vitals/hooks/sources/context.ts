@@ -1,10 +1,7 @@
-import { update } from 'claude-code'
-import type { EngineInterface, SessionUsage } from 'claude-code'
+import type { SessionUsage } from 'claude-code'
 
 import type { ContextRow, ContextState, SpendState } from '../../types'
-import * as S from '../state'
 
-const PANE_COLUMNS = 46
 
 export function contextFrom(usage: Pick<SessionUsage, 'context'>, isExact: boolean, model: string | null): ContextState {
   const breakdown = usage.context.breakdown
@@ -58,18 +55,4 @@ export function barRuns(rows: readonly ContextRow[], window: number, width: numb
   }
   const free = rows.find(row => row.kind === 'free') ?? { name: 'Free space', tokens: 0, kind: 'free' as const }
   return [...runs, { row: free, cells: width - taken }]
-}
-
-/** Re-reads the window's breakdown (and the status line's figures) into the context and spend atoms. */
-export async function refreshContext($: EngineInterface, detail: 'summary' | 'full'): Promise<void> {
-  try {
-    const [usage, model] = await Promise.all([
-      $.session.usage({ breakdown: detail, columns: PANE_COLUMNS }),
-      $.session.model(),
-    ])
-    await update($, S.context, () => contextFrom(usage, detail === 'full', model))
-    await update($, S.spend, () => spendFrom(usage))
-  } catch {
-    // No session bound yet, or the count failed: the last figures stand.
-  }
 }
