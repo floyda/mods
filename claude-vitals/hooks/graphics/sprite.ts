@@ -1,90 +1,19 @@
 import type { Mood } from '../mood'
 import { base64 } from './canvas'
+import { ART, ART_COLORS, ART_SIZE } from './claw-art'
 
-/** One frame: 10 rows of 14 pixels, one character each ('.' transparent). */
+/** One frame: 32 rows of 32 pixels, one letter each ('.' transparent), drawn by tools/claw.py. */
 export type Frame = readonly string[]
 
-export const SPRITE_WIDTH = 16
-export const SPRITE_HEIGHT = 11
-/** On the terminal: two pixels a cell, one above the other. */
-export const SPRITE_COLUMNS = 16
-export const SPRITE_ROWS = 6
+export const SPRITE_WIDTH = ART_SIZE
+export const SPRITE_HEIGHT = ART_SIZE
+/** On the terminal without pictures: the art halved to 16 × 16, two pixels a cell, one above the other. */
+export const SPRITE_COLUMNS = ART_SIZE / 2
+export const SPRITE_ROWS = ART_SIZE / 4
 
-// Open pincers raised, a body lit along its top and shaded underneath, two eyes, four legs.
-const BODY: Frame = [
-  'O..O........O..O',
-  'OO.O........O.OO',
-  'OOOO........OOOO',
-  '.OOO........OOO.',
-  '..OO........OO..',
-  '..OHHHHHHHHHHO..',
-  '...OOEOOOOEOO...',
-  '...OOEOOOOEOO...',
-  '....DDDDDDDD....',
-  '...O.O....O.O...',
-  '..O..O....O..O..',
-]
-
-// An overlay paints over a frame by row: '.' keeps the pixel, '_' clears it, any other letter paints it.
-type Overlay = Record<number, string>
-const EYES_SHUT: Overlay = { 6: '.....O....O.....', 7: '.....K....K.....' }
-const SWEAT_A: Overlay = { 5: '..............B.', 6: '..............B.' }
-const SWEAT_B: Overlay = { 6: '..............B.', 7: '..............B.' }
-const FROST: Overlay = { 0: 'F..F........F..F', 9: '......F..F......' }
-const MOTION: Overlay = { 1: '....M......M....', 2: '....M......M....' }
-const CLAWS_SHUT: Overlay = { 0: '_OO_........_OO_', 1: 'OOOO........OOOO' }
-const SPARKLE_1: Overlay = { 0: '.......S........', 1: '......SSS.......', 2: '.......S........', 9: 'S..............S' }
-const SPARKLE_2: Overlay = { 1: '.....S....S.....', 3: '....S......S....', 10: '.S............S.' }
-const SPARKLE_3: Overlay = { 0: '....S......S....', 2: '.......SS.......', 8: 'S..............S' }
-const Z_LEFT: Overlay = { 0: '....ZZZZZ.......', 1: '.......Z........', 2: '......Z.........', 3: '.....Z..........', 4: '....ZZZZZ.......' }
-const Z_RIGHT: Overlay = { 0: '......ZZZZZ.....', 1: '.........Z......', 2: '........Z.......', 3: '.......Z........', 4: '......ZZZZZ.....' }
-
-const COLORS: Record<string, number> = {
-  O: 0xd97757,
-  H: 0xeb9a78,
-  D: 0xa8502f,
-  E: 0x1b1b1b,
-  K: 0x5a2a18,
-  I: 0x8fc4f2,
-  J: 0xc4e2ff,
-  G: 0x5f93c4,
-  F: 0xffffff,
-  B: 0x4aa3ff,
-  M: 0xf3efe6,
-  S: 0xfbbf24,
-  Z: 0xc9c6ff,
-}
+const COLORS = ART_COLORS
 const DEFAULT = 0x01000000
-
-function paint(base: Frame, ...overlays: Overlay[]): Frame {
-  return base.map((row, y) =>
-    overlays.reduce<string>((out, overlay) => {
-      const over = overlay[y]
-      if (over === undefined) return out
-      return [...out]
-        .map((pixel, x) => {
-          const mark = over[x] ?? '.'
-          return mark === '.' ? pixel : mark === '_' ? '.' : mark
-        })
-        .join('')
-    }, row),
-  )
-}
-
-/** Frozen: the body, its light and its shade each turn to ice. */
-const icy = (frame: Frame): Frame => frame.map(row => row.replaceAll('O', 'I').replaceAll('H', 'J').replaceAll('D', 'G'))
-const COLD = paint(icy(BODY), FROST)
-const SHIVER = COLD.map(row => `.${row.slice(0, -1)}`)
-const ASLEEP = paint(BODY, EYES_SHUT)
-
-const FRAMES: Record<Mood, readonly Frame[]> = {
-  content: [BODY, ASLEEP],
-  cold: [COLD, SHIVER],
-  sweating: [paint(BODY, SWEAT_A), paint(BODY, SWEAT_B)],
-  working: [paint(BODY, MOTION), paint(BODY, CLAWS_SHUT)],
-  celebrating: [paint(BODY, SPARKLE_1), paint(BODY, SPARKLE_2), paint(BODY, SPARKLE_3)],
-  asleep: [paint(ASLEEP, Z_LEFT), paint(ASLEEP, Z_RIGHT), ASLEEP],
-}
+const FRAMES: Record<Mood, readonly Frame[]> = ART
 
 /** Frames a second for the moods that loop; content blinks and cold shivers on their own clocks. */
 export const MOOD_FPS: Record<Mood, number> = {
@@ -123,7 +52,7 @@ export function frameIndex(mood: Mood, ms: number): number {
 }
 
 export function frameAt(mood: Mood, ms: number): Frame {
-  return FRAMES[mood][frameIndex(mood, ms)] ?? BODY
+  return FRAMES[mood][frameIndex(mood, ms)] ?? FRAMES.content[0] ?? []
 }
 
 /** The frame as RGBA pixels, each sprite pixel `scale` × `scale`, transparent where '.'. */
@@ -149,13 +78,36 @@ export function spriteRgba(frame: Frame, scale: number): { rgba: string; width: 
   return { rgba: base64(data), width, height }
 }
 
-/** The frame as a Raster's cells, two pixels a cell with half blocks: `[codePoint, fg, bg]` each, base64. */
+/** The art halved: each 2 × 2 block becomes its most common opaque colour, or transparent when mostly empty. */
+export function halve(frame: Frame): Frame {
+  const out: string[] = []
+  for (let y = 0; y < frame.length; y += 2) {
+    let row = ''
+    for (let x = 0; x < (frame[0]?.length ?? 0); x += 2) {
+      const block = [frame[y]?.[x], frame[y]?.[x + 1], frame[y + 1]?.[x], frame[y + 1]?.[x + 1]].filter(
+        (mark): mark is string => mark !== undefined && mark !== '.',
+      )
+      if (block.length < 2) {
+        row += '.'
+        continue
+      }
+      const counts = new Map<string, number>()
+      for (const mark of block) counts.set(mark, (counts.get(mark) ?? 0) + 1)
+      row += [...counts].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '.'
+    }
+    out.push(row)
+  }
+  return out
+}
+
+/** The frame as a Raster's cells (the art halved, two pixels a cell with half blocks): `[codePoint, fg, bg]` each, base64. */
 export function spriteCells(frame: Frame): string {
+  const small = halve(frame)
   const words: number[] = []
   for (let row = 0; row < SPRITE_ROWS; row++) {
     for (let x = 0; x < SPRITE_COLUMNS; x++) {
-      const top = COLORS[frame[row * 2]?.[x] ?? '.']
-      const bottom = COLORS[frame[row * 2 + 1]?.[x] ?? '.']
+      const top = COLORS[small[row * 2]?.[x] ?? '.']
+      const bottom = COLORS[small[row * 2 + 1]?.[x] ?? '.']
       if (top === undefined && bottom === undefined) words.push(0x20, DEFAULT, DEFAULT)
       else if (top === undefined) words.push(0x2584, bottom ?? DEFAULT, DEFAULT)
       else words.push(0x2580, top, bottom ?? DEFAULT)

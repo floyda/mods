@@ -15,8 +15,8 @@ export type Picture = {
 }
 
 export const RING_COLUMNS = 10
-/** The claw as a picture: three rows, beside the header's three lines, ten columns keeping its shape. */
-export const CHARACTER_COLUMNS = 10
+/** The claw as a picture: three rows, beside the header's three lines; the art is square, so about seven columns. */
+export const CHARACTER_COLUMNS = 7
 export const CHARACTER_ROWS = 3
 export const RING_ROWS = 5
 const MEMO_LIMIT = 64
@@ -162,13 +162,13 @@ export function sparkPicture(pal: Palette, week: readonly number[]): Picture {
   })
 }
 
-/** The claw at 8 pixels a sprite pixel, transparent around it. */
+/** The claw at 4 pixels an art pixel (128 × 128), transparent around it; the terminal scales it into its cells. */
 export function characterPicture(frame: Frame): Picture {
   return remember(`character|${frame.join('/')}`, () => ({
     key: 'character',
     columns: CHARACTER_COLUMNS,
     rows: CHARACTER_ROWS,
     alt: 'claw',
-    source: spriteRgba(frame, 8),
+    source: spriteRgba(frame, 4),
   }))
 }

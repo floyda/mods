@@ -57,22 +57,27 @@ describe('mood', () => {
 })
 
 describe('sprite', () => {
-  test('every frame of every mood is 16 × 11', () => {
+  test('every frame of every mood is 32 × 32', () => {
     for (const mood of MOODS) {
       for (const frame of framesOf(mood)) {
         expect(frame).toHaveLength(SPRITE_HEIGHT)
         for (const row of frame) expect([...row]).toHaveLength(SPRITE_WIDTH)
       }
     }
+    expect(SPRITE_WIDTH).toBe(32)
   })
 
   test('each mood looks like itself', () => {
-    expect(framesOf('cold')[0]?.join('')).not.toContain('O')
-    expect(framesOf('working')[1]?.[0]).toBe('.OO..........OO.')
-    expect(framesOf('asleep')[0]?.[7]).toBe('...OOKOOOOKOO...')
-    expect(framesOf('asleep')[0]?.[4]).toBe('..OOZZZZZ...OO..')
-    expect(framesOf('sweating')[0]?.join('')).toContain('B')
-    expect(framesOf('celebrating').every(frame => frame.join('').includes('S'))).toBe(true)
+    const has = (mood: Mood, i: number, mark: string) => framesOf(mood)[i]?.join('').includes(mark) === true
+    expect(has('content', 0, 'E')).toBe(true)
+    expect(has('content', 1, 'E')).toBe(false)
+    expect(has('cold', 0, 'O')).toBe(false)
+    expect(has('cold', 0, 'F')).toBe(true)
+    expect(framesOf('working')[1]).not.toEqual(framesOf('working')[0])
+    expect(has('sweating', 0, 'B')).toBe(true)
+    expect(framesOf('celebrating').every((_, i) => has('celebrating', i, 'S'))).toBe(true)
+    expect(has('asleep', 0, 'Z')).toBe(true)
+    expect(has('asleep', 0, 'K')).toBe(true)
   })
 
   test('working clacks at 4 fps; cold shivers for 200 ms every 5 s', () => {
@@ -102,10 +107,11 @@ describe('sprite', () => {
   })
 
   test('pictures and cells come out the expected sizes', () => {
-    const picture = spriteRgba(frameAt('content', 0), 8)
+    const picture = spriteRgba(frameAt('content', 0), 4)
     expect(picture.width).toBe(128)
-    expect(picture.height).toBe(88)
-    expect(picture.rgba).toHaveLength(Math.ceil((128 * 88 * 4) / 3) * 4)
-    expect(spriteCells(frameAt('content', 0))).toHaveLength(Math.ceil((16 * 6 * 12) / 3) * 4)
+    expect(picture.height).toBe(128)
+    expect(picture.rgba).toHaveLength(Math.ceil((128 * 128 * 4) / 3) * 4)
+    // Text mode: the art halved to 16 × 16, two pixels a cell: 16 columns × 8 rows.
+    expect(spriteCells(frameAt('content', 0))).toHaveLength(Math.ceil((16 * 8 * 12) / 3) * 4)
   })
 })
