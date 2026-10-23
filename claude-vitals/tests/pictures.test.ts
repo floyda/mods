@@ -34,7 +34,7 @@ describe('pictures', () => {
   test('limit pills, the sparkline and the claw come out their sizes', () => {
     expect(shape(limitPill(DARK, 'five_hour', 46))).toEqual(['limit-five_hour', 10, 1, 160, 32])
     expect(shape(sparkPicture(DARK, [12, 24, 18, 31, 44, 27, 38.9]))).toEqual(['spark', 8, 2, 128, 64])
-    expect(shape(characterPicture(frameAt('content', 0)))).toEqual(['character', 10, 3, 112, 80])
+    expect(shape(characterPicture(frameAt('content', 0)))).toEqual(['character', 10, 3, 128, 88])
   })
 
   test('the cache colour moves teal, amber, red as the TTL runs down', () => {

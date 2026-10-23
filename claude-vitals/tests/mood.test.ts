@@ -57,7 +57,7 @@ describe('mood', () => {
 })
 
 describe('sprite', () => {
-  test('every frame of every mood is 14 × 10', () => {
+  test('every frame of every mood is 16 × 11', () => {
     for (const mood of MOODS) {
       for (const frame of framesOf(mood)) {
         expect(frame).toHaveLength(SPRITE_HEIGHT)
@@ -68,8 +68,9 @@ describe('sprite', () => {
 
   test('each mood looks like itself', () => {
     expect(framesOf('cold')[0]?.join('')).not.toContain('O')
-    expect(framesOf('working')[1]?.[0]).toBe('..............')
-    expect(framesOf('asleep')[0]?.[5]).toBe('...OKOOOOKO...')
+    expect(framesOf('working')[1]?.[0]).toBe('.OO..........OO.')
+    expect(framesOf('asleep')[0]?.[7]).toBe('...OOKOOOOKOO...')
+    expect(framesOf('asleep')[0]?.[4]).toBe('..OOZZZZZ...OO..')
     expect(framesOf('sweating')[0]?.join('')).toContain('B')
     expect(framesOf('celebrating').every(frame => frame.join('').includes('S'))).toBe(true)
   })
@@ -102,9 +103,9 @@ describe('sprite', () => {
 
   test('pictures and cells come out the expected sizes', () => {
     const picture = spriteRgba(frameAt('content', 0), 8)
-    expect(picture.width).toBe(112)
-    expect(picture.height).toBe(80)
-    expect(picture.rgba).toHaveLength(Math.ceil((112 * 80 * 4) / 3) * 4)
-    expect(spriteCells(frameAt('content', 0))).toHaveLength(1120)
+    expect(picture.width).toBe(128)
+    expect(picture.height).toBe(88)
+    expect(picture.rgba).toHaveLength(Math.ceil((128 * 88 * 4) / 3) * 4)
+    expect(spriteCells(frameAt('content', 0))).toHaveLength(Math.ceil((16 * 6 * 12) / 3) * 4)
   })
 })

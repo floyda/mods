@@ -4,50 +4,55 @@ import { base64 } from './canvas'
 /** One frame: 10 rows of 14 pixels, one character each ('.' transparent). */
 export type Frame = readonly string[]
 
-export const SPRITE_WIDTH = 14
-export const SPRITE_HEIGHT = 10
+export const SPRITE_WIDTH = 16
+export const SPRITE_HEIGHT = 11
 /** On the terminal: two pixels a cell, one above the other. */
-export const SPRITE_COLUMNS = 14
-export const SPRITE_ROWS = 5
+export const SPRITE_COLUMNS = 16
+export const SPRITE_ROWS = 6
 
+// Open pincers raised, a body lit along its top and shaded underneath, two eyes, four legs.
 const BODY: Frame = [
-  'OO..........OO',
-  'O.O........O.O',
-  '.OO........OO.',
-  '..OO......OO..',
-  '...OOOOOOOO...',
-  '...OEOOOOEO...',
-  '...OOOOOOOO...',
-  '...OOOOOOOO...',
-  '...O.O..O.O...',
-  '..............',
+  'O..O........O..O',
+  'OO.O........O.OO',
+  'OOOO........OOOO',
+  '.OOO........OOO.',
+  '..OO........OO..',
+  '..OHHHHHHHHHHO..',
+  '...OOEOOOOEOO...',
+  '...OOEOOOOEOO...',
+  '....DDDDDDDD....',
+  '...O.O....O.O...',
+  '..O..O....O..O..',
 ]
 
 // An overlay paints over a frame by row: '.' keeps the pixel, '_' clears it, any other letter paints it.
 type Overlay = Record<number, string>
-const SWEAT_A: Overlay = { 3: '............B.', 4: '............B.' }
-const SWEAT_B: Overlay = { 4: '............B.', 5: '............B.' }
-const FROST: Overlay = { 0: 'F............F', 9: '....F....F....' }
-const MOTION: Overlay = { 1: 'M............M', 2: 'M............M' }
-const CLAWS_SHUT: Overlay = { 0: '__..........__', 1: 'OOO........OOO' }
-const EYES_SHUT: Overlay = { 5: '....K....K....' }
-const SPARKLE_1: Overlay = { 0: '..S........S..', 9: '.S..........S.' }
-const SPARKLE_2: Overlay = { 0: '....S....S....', 4: 'S............S' }
-const SPARKLE_3: Overlay = { 6: '.S..........S.', 9: '...S......S...' }
-const Z_LOW: Overlay = { 1: '.....ZZZ......', 2: '......Z.......', 3: '.....ZZZ......' }
-const Z_HIGH: Overlay = { 0: '......ZZZ.....', 1: '.......Z......', 2: '......ZZZ.....' }
-const Z_GONE: Overlay = { 0: '........Z.....' }
+const EYES_SHUT: Overlay = { 6: '.....O....O.....', 7: '.....K....K.....' }
+const SWEAT_A: Overlay = { 5: '..............B.', 6: '..............B.' }
+const SWEAT_B: Overlay = { 6: '..............B.', 7: '..............B.' }
+const FROST: Overlay = { 0: 'F..F........F..F', 9: '......F..F......' }
+const MOTION: Overlay = { 1: '....M......M....', 2: '....M......M....' }
+const CLAWS_SHUT: Overlay = { 0: '_OO_........_OO_', 1: 'OOOO........OOOO' }
+const SPARKLE_1: Overlay = { 0: '.......S........', 1: '......SSS.......', 2: '.......S........', 9: 'S..............S' }
+const SPARKLE_2: Overlay = { 1: '.....S....S.....', 3: '....S......S....', 10: '.S............S.' }
+const SPARKLE_3: Overlay = { 0: '....S......S....', 2: '.......SS.......', 8: 'S..............S' }
+const Z_LEFT: Overlay = { 0: '....ZZZZZ.......', 1: '.......Z........', 2: '......Z.........', 3: '.....Z..........', 4: '....ZZZZZ.......' }
+const Z_RIGHT: Overlay = { 0: '......ZZZZZ.....', 1: '.........Z......', 2: '........Z.......', 3: '.......Z........', 4: '......ZZZZZ.....' }
 
 const COLORS: Record<string, number> = {
   O: 0xd97757,
-  I: 0x9ccfff,
+  H: 0xeb9a78,
+  D: 0xa8502f,
   E: 0x1b1b1b,
-  K: 0x7a3a22,
-  B: 0x4aa3ff,
+  K: 0x5a2a18,
+  I: 0x8fc4f2,
+  J: 0xc4e2ff,
+  G: 0x5f93c4,
   F: 0xffffff,
+  B: 0x4aa3ff,
   M: 0xf3efe6,
-  Z: 0xc9c6ff,
   S: 0xfbbf24,
+  Z: 0xc9c6ff,
 }
 const DEFAULT = 0x01000000
 
@@ -66,17 +71,19 @@ function paint(base: Frame, ...overlays: Overlay[]): Frame {
   )
 }
 
-const icy = (frame: Frame): Frame => frame.map(row => row.replaceAll('O', 'I'))
+/** Frozen: the body, its light and its shade each turn to ice. */
+const icy = (frame: Frame): Frame => frame.map(row => row.replaceAll('O', 'I').replaceAll('H', 'J').replaceAll('D', 'G'))
 const COLD = paint(icy(BODY), FROST)
 const SHIVER = COLD.map(row => `.${row.slice(0, -1)}`)
+const ASLEEP = paint(BODY, EYES_SHUT)
 
 const FRAMES: Record<Mood, readonly Frame[]> = {
-  content: [BODY, paint(BODY, EYES_SHUT)],
+  content: [BODY, ASLEEP],
   cold: [COLD, SHIVER],
   sweating: [paint(BODY, SWEAT_A), paint(BODY, SWEAT_B)],
   working: [paint(BODY, MOTION), paint(BODY, CLAWS_SHUT)],
   celebrating: [paint(BODY, SPARKLE_1), paint(BODY, SPARKLE_2), paint(BODY, SPARKLE_3)],
-  asleep: [paint(BODY, EYES_SHUT, Z_LOW), paint(BODY, EYES_SHUT, Z_HIGH), paint(BODY, EYES_SHUT, Z_GONE)],
+  asleep: [paint(ASLEEP, Z_LEFT), paint(ASLEEP, Z_RIGHT), ASLEEP],
 }
 
 /** Frames a second for the moods that loop; content blinks and cold shivers on their own clocks. */
