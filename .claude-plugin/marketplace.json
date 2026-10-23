@@ -6,6 +6,11 @@
       "name": "cache-countdown",
       "source": "./cache-countdown",
       "description": "Counts down to the prompt cache going cold, warns before it does, and when it has, offers to send with full context or compress the session first."
+    },
+    {
+      "name": "vitals",
+      "source": "./claude-vitals",
+      "description": "A live sidebar of the session's vitals: prompt cache, context, spend and today's usage, edited files to open in Zed, background tasks, and a pixel claw that reacts to it all."
     }
   ]
 }
