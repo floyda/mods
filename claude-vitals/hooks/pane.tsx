@@ -13,6 +13,7 @@ import type {
   ViewState,
 } from '../types'
 import { cacheCard } from './cards/cache'
+import { contextCard } from './cards/context'
 import { headerCard } from './cards/header'
 import type { Kit } from './cards/kit'
 import { homePath } from './format'
@@ -64,5 +65,6 @@ export function paneCards(kit: Kit, d: PaneData, s: PaneSettings): RenderElement
       showCharacter: s.showCharacter,
     }),
     cacheCard(kit, cacheView(d.cache, d.now)),
+    contextCard(kit, d.context),
   ]
 }
