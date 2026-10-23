@@ -14,6 +14,7 @@ import type {
 } from '../types'
 import { cacheCard } from './cards/cache'
 import { contextCard } from './cards/context'
+import { usageCard } from './cards/usage'
 import { headerCard } from './cards/header'
 import type { Kit } from './cards/kit'
 import { homePath } from './format'
@@ -66,5 +67,6 @@ export function paneCards(kit: Kit, d: PaneData, s: PaneSettings): RenderElement
     }),
     cacheCard(kit, cacheView(d.cache, d.now)),
     contextCard(kit, d.context),
+    usageCard(kit, { spend: d.spend, cc: d.ccusage, now: d.now, tzOffsetMin: d.place.tzOffsetMin, refreshMs: s.refreshMs }),
   ]
 }
