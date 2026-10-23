@@ -67,3 +67,28 @@ export const BLOCKS_JSON = JSON.stringify({
     block('2026-10-21T11:14:30.000Z', '2026-10-21T16:14:30.000Z', true),
   ],
 })
+
+export const NUMSTAT = '120\t4\thooks/register.tsx\n88\t0\thooks/usage.ts\n'
+
+export const DIFF_U0 = [
+  'diff --git a/hooks/register.tsx b/hooks/register.tsx',
+  'index 1111111..2222222 100644',
+  '--- a/hooks/register.tsx',
+  '+++ b/hooks/register.tsx',
+  '@@ -40,0 +41,3 @@ export const register',
+  '+one',
+  '@@ -90 +93 @@',
+  'diff --git a/new.ts b/new.ts',
+  'new file mode 100644',
+  '--- /dev/null',
+  '+++ b/new.ts',
+  '@@ -0,0 +1,2 @@',
+  '+a',
+  'diff --git a/gone.ts b/gone.ts',
+  'deleted file mode 100644',
+  '--- a/gone.ts',
+  '+++ /dev/null',
+  '@@ -1,2 +0,0 @@',
+  '-a',
+  '',
+].join('\n')
