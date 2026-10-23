@@ -159,6 +159,42 @@ def frames():
     f['asleep'] = sleep
     return {mood: [[''.join(row) for row in g] for g in gs] for mood, gs in f.items()}
 
+
+# Text mode cannot scale pictures: it draws two pixels a cell, so it gets its own hand-drawn 12 × 8 claw.
+SMALL = [
+    'O.O......O.O',
+    'OOO......OOO',
+    '.O.HHHHHH.O.',
+    '..OWEOOEWO..',
+    '..OOOOOOOO..',
+    '...DDDDDD...',
+    '..O.O..O.O..',
+    '.O..O..O..O.',
+]
+
+def over(base, *overlays):
+    out = []
+    for y, row in enumerate(base):
+        for o in overlays:
+            mask = o.get(y)
+            if mask:
+                row = ''.join(px if m == '.' else ('.' if m == '_' else m) for px, m in zip(row, mask))
+        out.append(row)
+    return out
+
+def small_frames():
+    shut = {3: '...KK..KK...'}
+    icy_small = [r.replace('O', 'I').replace('H', 'J').replace('D', 'G') for r in SMALL]
+    cold = over(icy_small, {0: 'F.F......F.F', 7: '....F..F....'})
+    return {
+        'content': [SMALL, over(SMALL, shut)],
+        'cold': [cold, ['.' + r[:-1] for r in cold]],
+        'sweating': [over(SMALL, {1: '...B........', 2: '..B.........'}), over(SMALL, {2: '..B.........', 3: '.B..........'})],
+        'working': [over(SMALL, {0: '...M....M...'}), over(SMALL, {0: '_O________O_', 1: 'OOO......OOO'})],
+        'celebrating': [over(SMALL, {0: '.....SS.....', 6: 'S..........S'}), over(SMALL, {0: '....S..S....', 4: 'S..........S'}), over(SMALL, {1: '.....SS.....', 7: 'S..........S'})],
+        'asleep': [over(SMALL, shut, {0: '....ZZ......', 1: '.....Z......'}), over(SMALL, shut, {0: '......ZZ....', 1: '.......Z....'}), over(SMALL, shut)],
+    }
+
 COLORS = {
     'O': 0xd97757, 'H': 0xf0a07f, 'D': 0xa94f2f, 'k': 0x3a1a10,
     'W': 0xfff6ee, 'w': 0xd9cfc6, 'E': 0x1b1b1b, 'L': 0xffffff, 'K': 0x3a1a10,
@@ -175,6 +211,18 @@ def write_ts(path, f):
     for mood, gs in f.items():
         lines.append(f'  {mood}: [')
         for g in gs:
+            lines.append('    [')
+            lines += [f"      '{row}'," for row in g]
+            lines.append('    ],')
+        lines.append('  ],')
+    lines.append('}')
+    lines += ['', 'export const SMALL_SIZE = [12, 8] as const', '',
+              "export const ART_SMALL: Record<'content' | 'cold' | 'sweating' | 'working' | 'celebrating' | 'asleep', readonly (readonly string[])[]> = {"]
+    for mood, gs in small_frames().items():
+        assert len(gs) == len(f[mood]), mood
+        lines.append(f'  {mood}: [')
+        for g in gs:
+            assert len(g) == 8 and all(len(r) == 12 for r in g), (mood, g)
             lines.append('    [')
             lines += [f"      '{row}'," for row in g]
             lines.append('    ],')

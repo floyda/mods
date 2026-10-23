@@ -1,19 +1,22 @@
 import type { Mood } from '../mood'
 import { base64 } from './canvas'
-import { ART, ART_COLORS, ART_SIZE } from './claw-art'
+import { ART, ART_COLORS, ART_SIZE, ART_SMALL, SMALL_SIZE } from './claw-art'
 
 /** One frame: 32 rows of 32 pixels, one letter each ('.' transparent), drawn by tools/claw.py. */
 export type Frame = readonly string[]
 
 export const SPRITE_WIDTH = ART_SIZE
 export const SPRITE_HEIGHT = ART_SIZE
-/** On the terminal without pictures: the art halved to 16 × 16, two pixels a cell, one above the other. */
-export const SPRITE_COLUMNS = ART_SIZE / 2
-export const SPRITE_ROWS = ART_SIZE / 4
+/** Text mode's own claw (the terminal cannot scale a picture): 12 × 8 pixels, two a cell, one above the other. */
+export const SMALL_WIDTH = SMALL_SIZE[0]
+export const SMALL_HEIGHT = SMALL_SIZE[1]
+export const SPRITE_COLUMNS = SMALL_WIDTH
+export const SPRITE_ROWS = SMALL_HEIGHT / 2
 
 const COLORS = ART_COLORS
 const DEFAULT = 0x01000000
 const FRAMES: Record<Mood, readonly Frame[]> = ART
+const SMALL_FRAMES: Record<Mood, readonly Frame[]> = ART_SMALL
 
 /** Frames a second for the moods that loop; content blinks and cold shivers on their own clocks. */
 export const MOOD_FPS: Record<Mood, number> = {
@@ -51,6 +54,15 @@ export function frameIndex(mood: Mood, ms: number): number {
   return Math.floor((ms * MOOD_FPS[mood]) / 1000) % FRAMES[mood].length
 }
 
+export function smallFramesOf(mood: Mood): readonly Frame[] {
+  return SMALL_FRAMES[mood]
+}
+
+/** Text mode's claw at `ms`: the same frame of the mood as the picture shows. */
+export function smallFrameAt(mood: Mood, ms: number): Frame {
+  return SMALL_FRAMES[mood][frameIndex(mood, ms)] ?? SMALL_FRAMES.content[0] ?? []
+}
+
 export function frameAt(mood: Mood, ms: number): Frame {
   return FRAMES[mood][frameIndex(mood, ms)] ?? FRAMES.content[0] ?? []
 }
@@ -78,31 +90,8 @@ export function spriteRgba(frame: Frame, scale: number): { rgba: string; width: 
   return { rgba: base64(data), width, height }
 }
 
-/** The art halved: each 2 × 2 block becomes its most common opaque colour, or transparent when mostly empty. */
-export function halve(frame: Frame): Frame {
-  const out: string[] = []
-  for (let y = 0; y < frame.length; y += 2) {
-    let row = ''
-    for (let x = 0; x < (frame[0]?.length ?? 0); x += 2) {
-      const block = [frame[y]?.[x], frame[y]?.[x + 1], frame[y + 1]?.[x], frame[y + 1]?.[x + 1]].filter(
-        (mark): mark is string => mark !== undefined && mark !== '.',
-      )
-      if (block.length < 2) {
-        row += '.'
-        continue
-      }
-      const counts = new Map<string, number>()
-      for (const mark of block) counts.set(mark, (counts.get(mark) ?? 0) + 1)
-      row += [...counts].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '.'
-    }
-    out.push(row)
-  }
-  return out
-}
-
-/** The frame as a Raster's cells (the art halved, two pixels a cell with half blocks): `[codePoint, fg, bg]` each, base64. */
-export function spriteCells(frame: Frame): string {
-  const small = halve(frame)
+/** A small frame as a Raster's cells, two pixels a cell with half blocks: `[codePoint, fg, bg]` each, base64. */
+export function spriteCells(small: Frame): string {
   const words: number[] = []
   for (let row = 0; row < SPRITE_ROWS; row++) {
     for (let x = 0; x < SPRITE_COLUMNS; x++) {

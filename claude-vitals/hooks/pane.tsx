@@ -20,7 +20,7 @@ import { tasksCard } from './cards/tasks'
 import { headerCard } from './cards/header'
 import type { Kit } from './cards/kit'
 import { homePath } from './format'
-import { frameAt } from './graphics/sprite'
+import { frameAt, smallFrameAt } from './graphics/sprite'
 import { moodLabel, moodOf } from './mood'
 import type { MoodInput } from './mood'
 import { cacheView } from './sources/cache'
@@ -64,6 +64,7 @@ export function paneCards(kit: Kit, d: PaneData, s: PaneSettings): RenderElement
       place: homePath(d.place.cwd, d.place.home),
       mood,
       frame: frameAt(mood, d.now),
+      small: smallFrameAt(mood, d.now),
       label: moodLabel(mood, input),
       showCharacter: s.showCharacter,
     }),

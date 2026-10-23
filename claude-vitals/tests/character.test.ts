@@ -2,7 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
 import { paletteFor } from '../hooks/graphics/palette'
-import { frameAt, spriteCells } from '../hooks/graphics/sprite'
+import { smallFrameAt, spriteCells } from '../hooks/graphics/sprite'
 import type { Mood } from '../hooks/mood'
 import { CWD, usageFixture } from './fixtures'
 import { edit, mountPane, paneText, request, start, turnComplete, turnStart, type, world } from './world'
@@ -17,7 +17,7 @@ async function clawCells($: Engine): Promise<unknown> {
   return found?.props.cells
 }
 
-const drawn = (mood: Mood, ms: number) => spriteCells(frameAt(mood, ms))
+const drawn = (mood: Mood, ms: number) => spriteCells(smallFrameAt(mood, ms))
 
 describe('background tasks', () => {
   test('a running task shows what it does and for how long; finished ones are counted', async ($, on) => {

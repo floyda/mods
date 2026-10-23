@@ -5,6 +5,10 @@ import {
   frameIndex,
   framesOf,
   isBlinking,
+  SMALL_HEIGHT,
+  SMALL_WIDTH,
+  smallFrameAt,
+  smallFramesOf,
   SPRITE_HEIGHT,
   SPRITE_WIDTH,
   spriteCells,
@@ -67,6 +71,18 @@ describe('sprite', () => {
     expect(SPRITE_WIDTH).toBe(32)
   })
 
+  test('text mode has a small claw for every frame, 12 × 8, in step with the large one', () => {
+    for (const mood of MOODS) {
+      expect(smallFramesOf(mood)).toHaveLength(framesOf(mood).length)
+      for (const frame of smallFramesOf(mood)) {
+        expect(frame).toHaveLength(SMALL_HEIGHT)
+        for (const row of frame) expect([...row]).toHaveLength(SMALL_WIDTH)
+      }
+    }
+    expect([SMALL_WIDTH, SMALL_HEIGHT]).toEqual([12, 8])
+    expect(smallFrameAt('working', 250)).toBe(smallFramesOf('working')[frameIndex('working', 250)])
+  })
+
   test('each mood looks like itself', () => {
     const has = (mood: Mood, i: number, mark: string) => framesOf(mood)[i]?.join('').includes(mark) === true
     expect(has('content', 0, 'E')).toBe(true)
@@ -111,7 +127,7 @@ describe('sprite', () => {
     expect(picture.width).toBe(128)
     expect(picture.height).toBe(128)
     expect(picture.rgba).toHaveLength(Math.ceil((128 * 128 * 4) / 3) * 4)
-    // Text mode: the art halved to 16 × 16, two pixels a cell: 16 columns × 8 rows.
-    expect(spriteCells(frameAt('content', 0))).toHaveLength(Math.ceil((16 * 8 * 12) / 3) * 4)
+    // Text mode: its own 12 × 8 art, two pixels a cell: 12 columns × 4 rows.
+    expect(spriteCells(smallFrameAt('content', 0))).toHaveLength(Math.ceil((12 * 4 * 12) / 3) * 4)
   })
 })

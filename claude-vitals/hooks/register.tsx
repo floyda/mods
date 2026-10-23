@@ -13,7 +13,7 @@ import type { Animated, AnimatorHost } from './graphics/animator'
 import { pickMode } from './graphics/mode'
 import { paletteFor, themeOf } from './graphics/palette'
 import { cachePill, characterPicture } from './graphics/pictures'
-import { frameAt, frameIndex, spriteCells } from './graphics/sprite'
+import { frameAt, frameIndex, smallFrameAt, spriteCells } from './graphics/sprite'
 import { moodOf } from './mood'
 import { moodInput, paneCards } from './pane'
 import type { PaneData } from './pane'
@@ -360,7 +360,7 @@ async function animate($: EngineInterface, shown?: boolean): Promise<void> {
         const frame = frameAt(mood, ms)
         return {
           sig: `${mood}:${frameIndex(mood, ms)}`,
-          blit: isPixels ? { kind: 'image', source: characterPicture(frame).source } : { kind: 'raster', cells: spriteCells(frame) },
+          blit: isPixels ? { kind: 'image', source: characterPicture(frame).source } : { kind: 'raster', cells: spriteCells(smallFrameAt(mood, ms)) },
         }
       },
     })

@@ -15,6 +15,8 @@ export type HeaderData = {
   place: string
   mood: Mood
   frame: Frame
+  /** Text mode's small claw, the same moment. */
+  small: Frame
   label: string | null
   showCharacter: boolean
 }
@@ -36,7 +38,7 @@ export function headerCard(kit: Kit, d: HeaderData): RenderElement {
       kit.mode === 'pixels' ? (
         picture(kit, characterPicture(d.frame))
       ) : (
-        <Raster key="character" columns={SPRITE_COLUMNS} rows={SPRITE_ROWS} cells={spriteCells(d.frame)} />
+        <Raster key="character" columns={SPRITE_COLUMNS} rows={SPRITE_ROWS} cells={spriteCells(d.small)} />
       )
   }
   return (
