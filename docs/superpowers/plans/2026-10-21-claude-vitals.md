@@ -14,7 +14,7 @@
 
 - Work in the repository root on branch `claude-vitals`. The mod is the folder `claude-vitals/` beside `cache-countdown/`. Plugin name `claude-vitals`, command `/vitals`, pane id `vitals`, pane title `Vitals`.
 - A hooks module has no Node and no DOM. Every file is an ES module named `.ts`/`.tsx`. No `import()`. JSX compiles against the global `h`. Elements come from `$.ui.resolve(e)`, never globals.
-- `$.state` references are literal: `atom({ plugin: 'claude-vitals', key: '<key>' } as const, initial)`, with every key declared in `types/index.d.ts`.
+- `$.state` references are literal: `atom({ plugin: 'vitals', key: '<key>' } as const, initial)`, with every key declared in `types/index.d.ts`.
 - `$.env.get` takes string literals only: `'HOME'`, `'TERM'`, `'TERM_PROGRAM'`, `'KITTY_WINDOW_ID'`, `'TMUX'`.
 - No run-time dependency on cache-countdown. Code taken from it (the price table, the claw sprite, base64) is copied.
 - Editor: Zed only. Lookup order: the `zedPath` setting, `zed` on PATH, `/Applications/Zed.app/Contents/MacOS/cli`. Invocation: `<zed> /abs/path:LINE`.
@@ -34,7 +34,7 @@
 - UI copy, exactly:
   - `ccusage not found · npm i -g ccusage`
   - `ccusage failed: <first stderr line>`
-  - `Zed not found: set its path in claude-vitals settings`
+  - `Zed not found: set its path in vitals settings`
   - `not a git repo`
   - `git timed out`
   - `No files edited yet`
@@ -147,7 +147,7 @@ claude-vitals/
 
 ```json
 {
-  "name": "claude-vitals",
+  "name": "vitals",
   "version": "0.1.0",
   "description": "A live sidebar of the session's vitals: prompt cache, context, spend and today's usage, edited files you can open in Zed, background tasks, and a pixel claw that reacts to it all.",
   "author": { "name": "Andy Floyd" },
@@ -328,7 +328,7 @@ export type PlaceState = { cwd: string; home: string | null; tzOffsetMin: number
 
 declare module 'claude-code' {
   interface PluginState {
-    'claude-vitals': {
+    vitals: {
       cache: CacheState
       context: ContextState
       spend: SpendState
@@ -411,17 +411,17 @@ export const INITIAL_VIEW: ViewState = {
 }
 export const INITIAL_PLACE: PlaceState = { cwd: '', home: null, tzOffsetMin: 0 }
 
-export const cache = atom({ plugin: 'claude-vitals', key: 'cache' } as const, INITIAL_CACHE)
-export const context = atom({ plugin: 'claude-vitals', key: 'context' } as const, INITIAL_CONTEXT)
-export const spend = atom({ plugin: 'claude-vitals', key: 'spend' } as const, INITIAL_SPEND)
-export const ccusage = atom({ plugin: 'claude-vitals', key: 'ccusage' } as const, INITIAL_CCUSAGE)
-export const outputs = atom({ plugin: 'claude-vitals', key: 'outputs' } as const, [] as OutputRow[])
-export const changes = atom({ plugin: 'claude-vitals', key: 'changes' } as const, INITIAL_CHANGES)
-export const tasks = atom({ plugin: 'claude-vitals', key: 'tasks' } as const, INITIAL_TASKS)
-export const activity = atom({ plugin: 'claude-vitals', key: 'activity' } as const, INITIAL_ACTIVITY)
-export const view = atom({ plugin: 'claude-vitals', key: 'view' } as const, INITIAL_VIEW)
-export const place = atom({ plugin: 'claude-vitals', key: 'place' } as const, INITIAL_PLACE)
-export const now = atom({ plugin: 'claude-vitals', key: 'now' } as const, 0)
+export const cache = atom({ plugin: 'vitals', key: 'cache' } as const, INITIAL_CACHE)
+export const context = atom({ plugin: 'vitals', key: 'context' } as const, INITIAL_CONTEXT)
+export const spend = atom({ plugin: 'vitals', key: 'spend' } as const, INITIAL_SPEND)
+export const ccusage = atom({ plugin: 'vitals', key: 'ccusage' } as const, INITIAL_CCUSAGE)
+export const outputs = atom({ plugin: 'vitals', key: 'outputs' } as const, [] as OutputRow[])
+export const changes = atom({ plugin: 'vitals', key: 'changes' } as const, INITIAL_CHANGES)
+export const tasks = atom({ plugin: 'vitals', key: 'tasks' } as const, INITIAL_TASKS)
+export const activity = atom({ plugin: 'vitals', key: 'activity' } as const, INITIAL_ACTIVITY)
+export const view = atom({ plugin: 'vitals', key: 'view' } as const, INITIAL_VIEW)
+export const place = atom({ plugin: 'vitals', key: 'place' } as const, INITIAL_PLACE)
+export const now = atom({ plugin: 'vitals', key: 'now' } as const, 0)
 ```
 
 - [ ] **Step 5: Write the failing formatting tests**
@@ -3005,7 +3005,7 @@ describe('editor', () => {
 
   test('the app’s own CLI and the message are as the spec says', () => {
     expect(ZED_APP_CLI).toBe('/Applications/Zed.app/Contents/MacOS/cli')
-    expect(ZED_MISSING).toBe('Zed not found: set its path in claude-vitals settings')
+    expect(ZED_MISSING).toBe('Zed not found: set its path in vitals settings')
   })
 })
 ```
@@ -3023,7 +3023,7 @@ Expected: FAIL. The loader cannot resolve `../hooks/editor`.
 import type { EngineInterface, RenderSurface } from 'claude-code'
 
 export const ZED_APP_CLI = '/Applications/Zed.app/Contents/MacOS/cli'
-export const ZED_MISSING = 'Zed not found: set its path in claude-vitals settings'
+export const ZED_MISSING = 'Zed not found: set its path in vitals settings'
 
 /** Where to look for Zed's CLI, in order, without repeats. */
 export function zedCandidates(setting: string): string[] {
@@ -3526,7 +3526,7 @@ import type { Engine } from 'claude-code/testing'
 
 import { BLOCKS_JSON, CWD, DAILY_JSON, DIFF_U0, EDIT_HUNK, HOME, NUMSTAT, START, STEP_USAGE, usageFixture } from './fixtures'
 
-export const PLUGIN = 'claude-vitals'
+export const PLUGIN = 'vitals'
 export const ZED_APP = '/Applications/Zed.app/Contents/MacOS/cli'
 export const PANE_PROPS = {
   title: 'Vitals',
@@ -5069,7 +5069,7 @@ describe('the Outputs card', () => {
     const ui = await mountPane($)
     await ui.press({ key: `out-open:${A}` })
     await ui.unmount()
-    expect(seen.toasts).toEqual(['Zed not found: set its path in claude-vitals settings'])
+    expect(seen.toasts).toEqual(['Zed not found: set its path in vitals settings'])
     expect(seen.copied).toEqual([A])
   })
 
@@ -5734,7 +5734,7 @@ Replace `.claude-plugin/marketplace.json` with:
       "description": "Counts down to the prompt cache going cold, warns before it does, and when it has, offers to send with full context or compress the session first."
     },
     {
-      "name": "claude-vitals",
+      "name": "vitals",
       "source": "./claude-vitals",
       "description": "A live sidebar of the session's vitals: prompt cache, context, spend and today's usage, edited files to open in Zed, background tasks, and a pixel claw that reacts to it all."
     }

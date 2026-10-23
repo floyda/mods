@@ -1,0 +1,58 @@
+{
+  "name": "vitals",
+  "version": "0.1.0",
+  "description": "A live sidebar of the session's vitals: prompt cache, context, spend and today's usage, edited files you can open in Zed, background tasks, and a pixel claw that reacts to it all.",
+  "author": { "name": "Andy Floyd" },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "autoOpen": {
+      "type": "boolean",
+      "title": "Open on session start",
+      "description": "Open the sidebar when a session starts in the fullscreen layout at 144 columns or wider.",
+      "default": true
+    },
+    "columns": {
+      "type": "number",
+      "title": "Sidebar width",
+      "description": "Columns the docked sidebar asks for. A width you drag it to wins.",
+      "default": 46
+    },
+    "zedPath": {
+      "type": "string",
+      "title": "Zed CLI path",
+      "description": "Full path to Zed's command-line tool. Empty: zed on PATH, then /Applications/Zed.app/Contents/MacOS/cli.",
+      "default": ""
+    },
+    "ccusageCommand": {
+      "type": "string",
+      "title": "ccusage command",
+      "description": "How to run ccusage, for example: npx -y ccusage@20",
+      "default": "ccusage"
+    },
+    "ccusageRefreshSeconds": {
+      "type": "number",
+      "title": "ccusage refresh (seconds)",
+      "description": "How often usage figures refresh in the background. They also refresh after each turn, at most every 30 seconds.",
+      "default": 300
+    },
+    "graphics": {
+      "type": "string",
+      "title": "Graphics",
+      "description": "auto: pixel pictures in kitty and Ghostty, coloured text elsewhere. pixels or text forces one.",
+      "options": ["auto", "pixels", "text"],
+      "default": "auto"
+    },
+    "character": {
+      "type": "boolean",
+      "title": "Show the claw",
+      "description": "The pixel claw in the header, reacting to the session.",
+      "default": true
+    },
+    "animations": {
+      "type": "boolean",
+      "title": "Animations",
+      "description": "Animate the claw and the cache bar. Off draws still frames.",
+      "default": true
+    }
+  }
+}
