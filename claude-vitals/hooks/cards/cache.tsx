@@ -11,7 +11,8 @@ export function cacheBarColumns(width: number): number {
   return Math.max(8, width - 10)
 }
 
-export function cacheCard(kit: Kit, view: CacheView): RenderElement {
+/** `animatedAt`: the time whose animation frame the pill shows, or null for a still pill. */
+export function cacheCard(kit: Kit, view: CacheView, animatedAt: number | null = null): RenderElement {
   const { pal } = kit
   return card(kit, 'cache', 'Cache', pal.teal, isOpen => {
     if (!isOpen) return []
@@ -28,7 +29,7 @@ export function cacheCard(kit: Kit, view: CacheView): RenderElement {
     ]
     const columns = cacheBarColumns(kit.width)
     const bar =
-      kit.mode === 'pixels' ? picture(kit, cachePill(view, pal, columns, null)) : cellBar(kit, view.fraction, columns, () => tone)
+      kit.mode === 'pixels' ? picture(kit, cachePill(view, pal, columns, animatedAt)) : cellBar(kit, view.fraction, columns, () => tone)
     const hitColor = view.hit === null ? pal.dim : view.hit >= 0.8 ? pal.green : view.hit >= 0.5 ? pal.amber : pal.red
     rows.push(line(kit, 'cache-meter', [bar], view.hit === null ? [] : [text(kit, `hit ${Math.round(view.hit * 100)}%`, hitColor)]))
     if (view.warmUsd !== null && view.coldUsd !== null) {

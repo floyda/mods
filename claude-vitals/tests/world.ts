@@ -124,6 +124,7 @@ export function world(on: On, env: Record<string, string> = { HOME, TERM: 'xterm
   })
   on('ui.render', ($, e) => h($.ui.resolve(e).Box, {}) as RenderElement)
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  on('session.end', (_$, e) => ({ sessionId: e.sessionId }))
   on('session.usage', (_$, e) => {
     seen.counts.push(e.breakdown ?? 'none')
     return { value: answers.usage }

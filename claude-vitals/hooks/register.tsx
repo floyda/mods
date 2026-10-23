@@ -150,6 +150,18 @@ export const register: Register = (on, options) => {
     return result
   })
 
+  // /clear starts a new conversation: nothing of it is cached yet, nothing edited, no tasks.
+  on('session.end', async ($, e, next) => {
+    if (e.reason === 'clear') {
+      const now = await $.clock.now()
+      await update($, cacheState, c => ({ ...c, lastRequestAt: null, tokens: 0, recent: [] }))
+      await update($, outputsState, () => [])
+      await update($, tasksState, () => S.INITIAL_TASKS)
+      await update($, activityState, () => ({ ...S.INITIAL_ACTIVITY, lastActiveAt: now }))
+    }
+    return next(e)
+  })
+
   // A model switch says the TTL outright, and the new model starts with nothing cached.
   on('classic.PostModelSwitch', async ($, e, next) => {
     await update($, cacheState, c => ({ ...withEngineTtl(c, e.cache_ttl), lastRequestAt: null, model: e.to_model }))
@@ -228,7 +240,7 @@ export const register: Register = (on, options) => {
     const { Box } = ui
     return (
       <Box flexDirection="column" backgroundColor={pal.pane}>
-        {paneCards(kit, data, { showCharacter: settings.character, refreshMs: settings.refreshMs })}
+        {paneCards(kit, data, { showCharacter: settings.character, refreshMs: settings.refreshMs, isAnimated: settings.animations })}
       </Box>
     )
   })

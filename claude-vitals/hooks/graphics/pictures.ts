@@ -81,7 +81,7 @@ export function pillPicture(pal: Palette, o: PillOptions): Picture {
   const signature = [
     'pill', pal.theme, o.key, o.columns, o.fraction.toFixed(3), shimmer === null ? '-' : shimmer.toFixed(2), glow.toFixed(2), o.color(0), o.color(1),
   ].join('|')
-  return remember(signature, () => {
+  const make = () => {
     const width = o.columns * CELL_W
     const height = CELL_H
     const canvas = new Canvas(width, height)
@@ -104,7 +104,9 @@ export function pillPicture(pal: Palette, o: PillOptions): Picture {
       glow,
     )
     return pictureOf(o.key, o.columns, 1, o.alt, canvas)
-  })
+  }
+  // An animation frame is drawn once and gone: keeping it would push the still pictures out of the memo.
+  return shimmer !== null || glow !== 1 ? make() : remember(signature, make)
 }
 
 /** The cache pill: the TTL left, coloured by urgency; animated, a highlight sweeps it every 3 s and it pulses in the last 2 minutes. */

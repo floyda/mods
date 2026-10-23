@@ -39,7 +39,7 @@ export type PaneData = {
   now: number
 }
 
-export type PaneSettings = { showCharacter: boolean; refreshMs: number }
+export type PaneSettings = { showCharacter: boolean; refreshMs: number; isAnimated: boolean }
 
 export function moodInput(d: PaneData): MoodInput {
   return {
@@ -67,7 +67,8 @@ export function paneCards(kit: Kit, d: PaneData, s: PaneSettings): RenderElement
       label: moodLabel(mood, input),
       showCharacter: s.showCharacter,
     }),
-    cacheCard(kit, cacheView(d.cache, d.now)),
+    // Animated, the pill is drawn as the animator's frame for now, so a redraw never repaints a still one over it.
+    cacheCard(kit, cacheView(d.cache, d.now), s.isAnimated ? d.now : null),
     contextCard(kit, d.context),
     usageCard(kit, { spend: d.spend, cc: d.ccusage, now: d.now, tzOffsetMin: d.place.tzOffsetMin, refreshMs: s.refreshMs }),
     outputsCard(kit, { outputs: d.outputs, showAll: d.view.showAllOutputs, changes: d.changes, cwd: d.place.cwd, home: d.place.home }),
