@@ -16,6 +16,7 @@ import { cacheCard } from './cards/cache'
 import { contextCard } from './cards/context'
 import { usageCard } from './cards/usage'
 import { changesCard, outputsCard } from './cards/files'
+import { tasksCard } from './cards/tasks'
 import { headerCard } from './cards/header'
 import type { Kit } from './cards/kit'
 import { homePath } from './format'
@@ -71,5 +72,6 @@ export function paneCards(kit: Kit, d: PaneData, s: PaneSettings): RenderElement
     usageCard(kit, { spend: d.spend, cc: d.ccusage, now: d.now, tzOffsetMin: d.place.tzOffsetMin, refreshMs: s.refreshMs }),
     outputsCard(kit, { outputs: d.outputs, showAll: d.view.showAllOutputs, changes: d.changes, cwd: d.place.cwd, home: d.place.home }),
     changesCard(kit, { outputs: d.outputs, showAll: d.view.showAllOutputs, changes: d.changes, cwd: d.place.cwd, home: d.place.home }),
+    tasksCard(kit, d.tasks, d.now),
   ]
 }
