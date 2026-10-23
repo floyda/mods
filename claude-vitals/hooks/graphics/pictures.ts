@@ -3,7 +3,7 @@ import type { CacheView } from '../sources/cache'
 import { Canvas, CELL_H, CELL_W } from './canvas'
 import { categoryColor, heat, mix, rgb } from './palette'
 import type { Palette, Rgb } from './palette'
-import { SPRITE_COLUMNS, SPRITE_ROWS, spriteRgba } from './sprite'
+import { spriteRgba } from './sprite'
 import type { Frame } from './sprite'
 
 export type Picture = {
@@ -15,6 +15,9 @@ export type Picture = {
 }
 
 export const RING_COLUMNS = 10
+/** The claw as a picture: three rows, beside the header's three lines, ten columns keeping its shape. */
+export const CHARACTER_COLUMNS = 10
+export const CHARACTER_ROWS = 3
 export const RING_ROWS = 5
 const MEMO_LIMIT = 64
 const memo = new Map<string, Picture>()
@@ -163,8 +166,8 @@ export function sparkPicture(pal: Palette, week: readonly number[]): Picture {
 export function characterPicture(frame: Frame): Picture {
   return remember(`character|${frame.join('/')}`, () => ({
     key: 'character',
-    columns: SPRITE_COLUMNS,
-    rows: SPRITE_ROWS,
+    columns: CHARACTER_COLUMNS,
+    rows: CHARACTER_ROWS,
     alt: 'claw',
     source: spriteRgba(frame, 8),
   }))

@@ -26,8 +26,8 @@
     "ccusageCommand": {
       "type": "string",
       "title": "ccusage command",
-      "description": "How to run ccusage, for example: npx -y ccusage@20",
-      "default": "ccusage"
+      "description": "How to run ccusage: pnpx ccusage, npx -y ccusage@20, or ccusage when it is installed.",
+      "default": "pnpx ccusage"
     },
     "ccusageRefreshSeconds": {
       "type": "number",

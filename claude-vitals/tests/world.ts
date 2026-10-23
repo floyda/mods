@@ -45,7 +45,11 @@ function ran(stdout: string, exitCode = 0, stderr = ''): { value: ProcessRunResu
 
 /** The host's commands as these tests have them: date, ccusage, git and Zed. */
 function answerRun(argv: readonly string[], a: Answers): { value: ProcessRunResult } | { deny: string } {
-  const [exe = '', ...args] = argv
+  const [command = '', ...rest] = argv
+  // `pnpx ccusage …` runs ccusage itself.
+  const isPnpx = command === 'pnpx' && rest[0] === 'ccusage'
+  const exe = isPnpx ? 'ccusage' : command
+  const args = isPnpx ? rest.slice(1) : rest
   const line = args.join(' ')
   if (exe === 'date') return ran('+0100\n')
   if (exe === 'ccusage') {

@@ -3,7 +3,7 @@ import { describe, expect, test } from 'claude-code/testing'
 import { usageFixture } from './fixtures'
 import { mountPane, paneText, start, turnComplete, turnStart, world } from './world'
 
-const dailyRuns = (runs: string[][]) => runs.filter(run => run[0] === 'ccusage' && run.includes('daily')).length
+const dailyRuns = (runs: string[][]) => runs.filter(run => run.includes('ccusage') && run.includes('daily')).length
 
 describe('the Usage card', () => {
   test('shows the session, today by model, the 5-hour block and the limits', async ($, on) => {
@@ -13,8 +13,8 @@ describe('the Usage card', () => {
     for (const part of ['$4.12', '$38.90', 'Opus $31.20', 'Sonnet $6.10', 'Haiku $1.60', '2h14m', '$9.80/h', '~$61.00', 'Limit 5h', '46%', '17:00', 'Limit 7d', '22%', 'Mon']) {
       expect(text).toContain(part)
     }
-    expect(seen.runs).toContainEqual(['ccusage', 'claude', 'daily', '--json', '--breakdown', '--offline', '--since', '20261015'])
-    expect(seen.runs).toContainEqual(['ccusage', 'claude', 'blocks', '--active', '--json', '--offline'])
+    expect(seen.runs).toContainEqual(['pnpx', 'ccusage', 'claude', 'daily', '--json', '--breakdown', '--offline', '--since', '20261015'])
+    expect(seen.runs).toContainEqual(['pnpx', 'ccusage', 'claude', 'blocks', '--active', '--json', '--offline'])
   })
 
   test('without ccusage it says how to get it, keeps the engine’s figures, and Retry tries again', async ($, on) => {

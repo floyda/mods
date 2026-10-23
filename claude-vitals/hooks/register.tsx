@@ -66,7 +66,7 @@ const settings = {
   autoOpen: true,
   columns: 46,
   zedPath: '',
-  ccusageCommand: 'ccusage',
+  ccusageCommand: 'pnpx ccusage',
   refreshMs: 300_000,
   graphics: 'auto',
   character: true,
@@ -86,7 +86,7 @@ export const register: Register = (on, options) => {
   settings.autoOpen = options.autoOpen !== false
   settings.columns = Math.min(120, Math.max(30, Number(options.columns ?? 46) || 46))
   settings.zedPath = String(options.zedPath ?? '')
-  settings.ccusageCommand = String(options.ccusageCommand ?? 'ccusage').trim() || 'ccusage'
+  settings.ccusageCommand = String(options.ccusageCommand ?? 'pnpx ccusage').trim() || 'pnpx ccusage'
   settings.refreshMs = Math.max(30, Number(options.ccusageRefreshSeconds ?? 300) || 300) * 1_000
   settings.graphics = String(options.graphics ?? 'auto')
   settings.character = options.character !== false
