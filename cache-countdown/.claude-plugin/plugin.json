@@ -2,6 +2,7 @@
   "name": "cache-countdown",
   "version": "0.1.0",
   "description": "Counts down to the prompt cache going cold, writes a handoff while you are away, and when the cache is cold offers to resume from the handoff or send with full context.",
+  "author": { "name": "Andy Floyd" },
   "types": "./types/index.d.ts",
   "userConfig": {
     "cacheTtl": {

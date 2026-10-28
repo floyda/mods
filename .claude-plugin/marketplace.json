@@ -1,6 +1,7 @@
 {
   "name": "mods",
   "owner": { "name": "Andy Floyd" },
+  "description": "Andy Floyd's Claude Code mods: a prompt-cache countdown and a live vitals sidebar.",
   "plugins": [
     {
       "name": "cache-countdown",
