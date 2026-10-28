@@ -5,7 +5,7 @@
     {
       "name": "cache-countdown",
       "source": "./cache-countdown",
-      "description": "Counts down to the prompt cache going cold, warns before it does, and when it has, offers to send with full context or compress the session first."
+      "description": "Counts down to the prompt cache going cold, writes a handoff while you are away, and when the cache is cold offers to resume from the handoff or send with full context."
     },
     {
       "name": "vitals",
