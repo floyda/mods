@@ -12,8 +12,8 @@ Two Claude Code mods, published as a plugin marketplace.
 At the prompt of a Claude Code terminal session:
 
 ```
-/plugin install cache-countdown --marketplace OWNER/mods
-/plugin install vitals --marketplace OWNER/mods
+/plugin install cache-countdown --marketplace floyda/mods
+/plugin install vitals --marketplace floyda/mods
 ```
 
 Answer `y` to add the marketplace, pick a scope (user is first), then set the mod's options. The mod is active straight away.
