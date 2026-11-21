@@ -1,6 +1,6 @@
 {
   "name": "vitals",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A live sidebar of the session's vitals: prompt cache, context, spend and today's usage, edited files you can open in Zed, background tasks, and a pixel claw that reacts to it all.",
   "author": { "name": "Andy Floyd" },
   "types": "./types/index.d.ts",
