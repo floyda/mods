@@ -45,7 +45,7 @@ Options: open on start, sidebar width, Zed CLI path, ccusage command and refresh
 mods | git:main | Opus 5.5 | ctx:61% | ● warm 52:10 ttl:1h · next $0.02 / $0.96 cold | 5h:12%
 ```
 
-The cache countdown starts from the session's last response, at the TTL (5 minutes or 1 hour) its cache writes used, as the transcript records them. `ttl:5m?` means no cache write was found and 5 minutes is assumed. It turns amber and then red as time runs out, and shows `○ cold` with the next turn's cost once the cache has gone cold. Costs are estimates at API list prices, from the same table as vitals.
+The cache countdown starts from the session's last response, at the TTL (5 minutes or 1 hour) its cache writes used, as the transcript records them. `ttl:5m?` means no cache write was found and the API's 5-minute default is assumed. It turns amber and then red as time runs out, and shows `○ cold` with the next turn's cost once the cache has gone cold. Costs are estimates at API list prices, from the same table as vitals.
 
 It needs Node 22.18 or newer, which runs TypeScript directly. Copy the script:
 

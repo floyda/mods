@@ -88,8 +88,10 @@ function ttlOf(usage: Usage): Ttl | null {
 }
 
 /**
- * The main thread's last response: when it came, its model and usage, and the TTL its cache writes used.
- * `isDetected` is false when no response in the tail wrote to the cache, and the TTL is the 5 m default.
+ * The main thread's last response: when its request went out, its model and usage, and the TTL its cache
+ * writes used. The request went out at the entry before it (the prompt or a tool result): the cache's
+ * countdown restarts then. `isDetected` is false when no response in the tail wrote to the cache, and the
+ * TTL is the API's 5 m default.
  */
 function lastResponse(transcript: string): { at: number; model: string; usage: Usage; ttl: Ttl; isDetected: boolean } | null {
   let lines: string[]
@@ -110,12 +112,29 @@ function lastResponse(transcript: string): { at: number; model: string; usage: U
     const usage: Usage | undefined = entry?.message?.usage
     const model: string | undefined = entry?.message?.model
     if (entry?.type !== 'assistant' || entry.isSidechain === true || usage === undefined || !model || model === '<synthetic>') continue
-    found ??= { at: Date.parse(entry.timestamp), model, usage }
+    found ??= { at: sentAt(lines, i) ?? Date.parse(entry.timestamp), model, usage }
     // A response that only read the cache says nothing of its TTL: look further back for one that wrote.
     const ttl = ttlOf(usage)
     if (ttl !== null) return { ...found, ttl, isDetected: true }
   }
   return found === null ? null : { ...found, ttl: '5m', isDetected: false }
+}
+
+/** When the request answered by the response at `lines[index]` went out: the main thread's last user entry before it. */
+function sentAt(lines: string[], index: number): number | null {
+  for (let i = index - 1; i >= 0 && i >= index - 200; i--) {
+    if (!lines[i].includes('"user"')) continue
+    let entry: any
+    try {
+      entry = JSON.parse(lines[i])
+    } catch {
+      continue
+    }
+    if (entry?.type !== 'user' || entry.isSidechain === true) continue
+    const at = Date.parse(entry.timestamp)
+    return Number.isNaN(at) ? null : at
+  }
+  return null
 }
 
 function cacheSegment(transcript: string | undefined): string | null {
