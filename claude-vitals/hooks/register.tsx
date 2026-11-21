@@ -18,7 +18,8 @@ import { moodOf } from './mood'
 import { moodInput, paneCards } from './pane'
 import type { PaneData } from './pane'
 import { celebrate, completed, saved, started, typed } from './sources/activity'
-import { afterResponse, cacheView, resumed, withEngineTtl } from './sources/cache'
+import { afterResponse, cacheView, resumed, ttlFromTranscript, withEngineTtl, withWrittenTtl } from './sources/cache'
+import type { StepUsage } from './sources/cache'
 import {
   AFTER_TURN_GAP_MS,
   ccusageArgv,
@@ -59,6 +60,9 @@ const nowState = atom({ plugin: 'vitals', key: 'now' } as const, 0)
 
 const PANE = 'vitals'
 const TITLE = 'Vitals'
+const TRANSCRIPT_TAIL_BYTES = 512 * 1024
+// The turn's last response reaches the transcript 50–200 ms after its Stop hooks run.
+const TRANSCRIPT_SETTLE_MS = 500
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit'])
 
 // The module's own: set again by each load's `register`, so a reload starts them over.
@@ -81,6 +85,10 @@ let ticker: Timer | null = null
 let usageTimer: Timer | null = null
 let ticks = 0
 let autoOpenTried = false
+/** Whether responses carry their cache writes split by TTL; until one does, the transcript is read for it. */
+let stepsCarryWrites = false
+/** The session's transcript, as the last classic hook named it. */
+let transcriptPath: string | null = null
 
 export const register: Register = (on, options) => {
   settings.autoOpen = options.autoOpen !== false
@@ -144,8 +152,11 @@ export const register: Register = (on, options) => {
     if (e.agentId !== undefined) return yield* next(e)
     const sentAt = await $.clock.now()
     const result = yield* next(e)
-    const usage = result.usage
-    if (usage !== null) await update($, cacheState, c => afterResponse(c, sentAt, usage))
+    const usage = result.usage as StepUsage | null
+    if (usage !== null) {
+      if (usage.cache_creation != null) stepsCarryWrites = true
+      await update($, cacheState, c => afterResponse(c, sentAt, usage))
+    }
     $.clock.after(0, () => void refreshTasks($))
     return result
   })
@@ -168,13 +179,21 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
-  // A resumed session's cache is as warm as its last response is recent.
+  // A resumed session's cache is as warm as its last response is recent, at the TTL its transcript wrote with.
   on('classic.SessionStart', async ($, e, next) => {
     const seconds = e.seconds_since_last_response
     if (seconds !== undefined) {
       const at = (await $.clock.now()) - seconds * 1_000
       await update($, cacheState, c => (c.lastRequestAt === null ? resumed(c, at, e.context_tokens ?? 0, e.model ?? null) : c))
     }
+    transcriptPath = e.transcript_path ?? transcriptPath
+    $.clock.after(0, () => void readTranscriptTtl($))
+    return next(e)
+  })
+
+  // Names the transcript every turn, so a reloaded module finds it again.
+  on('classic.Stop', async ($, e, next) => {
+    transcriptPath = e.transcript_path ?? transcriptPath
     return next(e)
   })
 
@@ -192,6 +211,8 @@ export const register: Register = (on, options) => {
       const now = await $.clock.now()
       await update($, activityState, a => completed(a, now))
       $.clock.after(0, () => void afterTurn($))
+      // Responses do not carry their writes split by TTL: the transcript's record of them does, once written.
+      if (!stepsCarryWrites) $.clock.after(TRANSCRIPT_SETTLE_MS, () => void readTranscriptTtl($))
     }
     return next(e)
   })
@@ -429,6 +450,19 @@ async function refreshContext($: EngineInterface, detail: 'summary' | 'full'): P
     await update($, spendState, () => spendFrom(usage))
   } catch {
     // No session bound yet, or the count failed: the last figures stand.
+  }
+}
+
+/** The TTL the transcript's latest main-thread cache write used, read from its last 512 KB. */
+async function readTranscriptTtl($: EngineInterface): Promise<void> {
+  if (transcriptPath === null) return
+  try {
+    const { exitCode, stdout } = await $.process.run(['tail', '-c', String(TRANSCRIPT_TAIL_BYTES), transcriptPath], { timeoutMs: 5_000 })
+    if (exitCode !== 0) return
+    const ttl = ttlFromTranscript(stdout)
+    if (ttl !== null) await update($, cacheState, c => withWrittenTtl(c, ttl))
+  } catch {
+    // No transcript to read: the TTL stands.
   }
 }
 

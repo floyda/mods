@@ -232,7 +232,7 @@ Rules that keep units independent:
 | `config.set` for `theme` | Palette |
 | `f` (pane hotkey) | Context with `breakdown: 'full'` |
 
-**Cache TTL**: the engine's `cache_ttl` when an event reports one (the model-switch hook inputs carry `cache_ttl` and `prompt_cache_warm`). Otherwise inferred: a response after an idle gap of more than 5 minutes that still reads from cache means 1 h; one after a gap of between 5 minutes and 1 h with no cache read means 5 m. Default 1 h. Warm means `now < lastRequestAt + TTL`.
+**Cache TTL**: the TTL the main thread's latest cache write used, split into `ephemeral_1h_input_tokens` and `ephemeral_5m_input_tokens`: from the response's usage where it carries the split, else from the transcript's last 512 KB, read on session start and half a second after each turn (the turn's response reaches the transcript 50–200 ms after its Stop hooks). A model switch's `cache_ttl` counts until the next write. With neither, inferred: a response after an idle gap of more than 5 minutes that still reads from cache means 1 h; one after a gap of between 5 minutes and 1 h with no cache read means 5 m. Default 5 m, the API's. Warm means `now < lastRequestAt + TTL`.
 
 **Outputs line numbers and counts**: from the tool result's `structuredPatch` (Edit, MultiEdit, Write-as-update): `+`/`−` lines are counted, and the first changed line is the first hunk's `newStart` plus its leading context lines. For a Write that creates a file (no patch): added = the content's line count, first line 1. NotebookEdit: counted as one change, line 1. A file's row keeps the first changed line of its most recent edit.
 

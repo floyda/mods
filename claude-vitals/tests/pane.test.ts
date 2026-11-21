@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { HOME } from './fixtures'
+import { HOME, transcriptLine } from './fixtures'
 import { mountPane, open, paneText, request, start, world } from './world'
 
 const MINUTE = 60_000
@@ -30,8 +30,10 @@ describe('the pane', () => {
   })
 
   test('the cache counts down and prices the next turn, then goes cold', async ($, on) => {
-    const { clock } = world(on)
+    const { clock, answers } = world(on)
+    answers.transcript = transcriptLine('1h')
     await start($, clock)
+    await $.classic.SessionStart({ source: 'startup', transcript_path: '/t/s.jsonl' } as never)
     await request($)
     await clock.advance(7 * MINUTE + 50_000)
     const warm = await paneText($)

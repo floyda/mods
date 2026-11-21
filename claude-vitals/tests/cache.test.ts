@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import { costOf } from '../hooks/pricing'
-import { afterResponse, cacheView, hitRatio, resumed, withEngineTtl } from '../hooks/sources/cache'
+import { afterResponse, cacheView, hitRatio, resumed, ttlFromTranscript, withEngineTtl, writtenTtl } from '../hooks/sources/cache'
 import { INITIAL_CACHE } from '../hooks/state'
+import { transcriptLine } from './fixtures'
+import { paneText, request, start, turnComplete, turnStart, world } from './world'
 
 const T0 = 1_800_000_000_000
 const MINUTE = 60_000
@@ -14,11 +16,12 @@ const USAGE = {
   cache_read_input_tokens: 170_000,
   cache_creation_input_tokens: 9_490,
 }
+const USAGE_1H = { ...USAGE, cache_creation: { ephemeral_5m_input_tokens: 0, ephemeral_1h_input_tokens: 9_490 } }
 const cents = (usd: number | null) => (usd === null ? null : Math.round(usd * 100) / 100)
 
 describe('cache', () => {
   test('a response starts the countdown and prices the next turn', () => {
-    const state = afterResponse(INITIAL_CACHE, T0, USAGE)
+    const state = afterResponse(INITIAL_CACHE, T0, USAGE_1H)
     expect(state.lastRequestAt).toBe(T0)
     expect(state.tokens).toBe(180_000)
     expect(state.recent).toEqual([{ read: 170_000, input: 179_500 }])
@@ -33,7 +36,7 @@ describe('cache', () => {
   })
 
   test('it goes cold when the TTL runs out', () => {
-    const view = cacheView(afterResponse(INITIAL_CACHE, T0, USAGE), T0 + HOUR)
+    const view = cacheView(afterResponse(INITIAL_CACHE, T0, USAGE_1H), T0 + HOUR)
     expect(view.status).toBe('cold')
     expect(view.leftMs).toBe(0)
     expect(view.fraction).toBe(0)
@@ -67,8 +70,64 @@ describe('cache', () => {
     expect(afterResponse(told, T0 + 30 * MINUTE, USAGE).ttl).toBe('5m')
   })
 
+  test('a response’s cache writes say the TTL, over a default, a guess or the engine’s word', () => {
+    const fiveMinute = { ...USAGE, cache_creation: { ephemeral_5m_input_tokens: 9_490, ephemeral_1h_input_tokens: 0 } }
+    const written = afterResponse(INITIAL_CACHE, T0, fiveMinute)
+    expect(written.ttl).toBe('5m')
+    expect(written.ttlSource).toBe('written')
+    expect(cacheView(written, T0 + 6 * MINUTE).status).toBe('cold')
+
+    const hour = { ...USAGE, cache_creation: { ephemeral_5m_input_tokens: 0, ephemeral_1h_input_tokens: 9_490 } }
+    expect(afterResponse(withEngineTtl(INITIAL_CACHE, '5m'), T0, hour).ttl).toBe('1h')
+    expect(afterResponse({ ...INITIAL_CACHE, ttl: '5m', ttlSource: 'learned' }, T0, hour).ttl).toBe('1h')
+  })
+
+  test('once written, a miss after a pause does not teach 5 m', () => {
+    const hour = { ...USAGE, cache_creation: { ephemeral_5m_input_tokens: 0, ephemeral_1h_input_tokens: 9_490 } }
+    const first = afterResponse(INITIAL_CACHE, T0, hour)
+    const missAfterPause = afterResponse(first, T0 + 10 * MINUTE, { ...USAGE, cache_read_input_tokens: 0 })
+    expect(missAfterPause.ttl).toBe('1h')
+    expect(missAfterPause.ttlSource).toBe('written')
+  })
+
+  test('a response that only read keeps the TTL; mixed writes go by the larger share', () => {
+    expect(writtenTtl({ ephemeral_5m_input_tokens: 0, ephemeral_1h_input_tokens: 0 })).toBeNull()
+    expect(writtenTtl(null)).toBeNull()
+    expect(writtenTtl({ ephemeral_5m_input_tokens: 10, ephemeral_1h_input_tokens: 500 })).toBe('1h')
+    expect(writtenTtl({ ephemeral_5m_input_tokens: 500, ephemeral_1h_input_tokens: 10 })).toBe('5m')
+  })
+
+  test('the transcript gives the TTL of the main thread’s latest write', () => {
+    const entry = (ttl: '5m' | '1h', extra: Record<string, unknown> = {}) =>
+      JSON.stringify({
+        type: 'assistant',
+        ...extra,
+        message: {
+          usage: {
+            cache_creation: { ephemeral_5m_input_tokens: ttl === '5m' ? 100 : 0, ephemeral_1h_input_tokens: ttl === '1h' ? 100 : 0 },
+          },
+        },
+      })
+    const readOnly = JSON.stringify({
+      type: 'assistant',
+      message: { usage: { cache_creation: { ephemeral_5m_input_tokens: 0, ephemeral_1h_input_tokens: 0 } } },
+    })
+    const text = ['{"cut sho', entry('5m'), entry('1h'), entry('5m', { isSidechain: true }), readOnly, '{"type":"user"}', ''].join('\n')
+    expect(ttlFromTranscript(text)).toBe('1h')
+    expect(ttlFromTranscript([entry('1h'), entry('5m')].join('\n'))).toBe('5m')
+    expect(ttlFromTranscript(readOnly)).toBeNull()
+    expect(ttlFromTranscript('')).toBeNull()
+  })
+
+  test('with nothing known the TTL is the API’s 5 m default', () => {
+    expect(INITIAL_CACHE.ttl).toBe('5m')
+    const state = afterResponse(INITIAL_CACHE, T0, USAGE)
+    expect(cacheView(state, T0 + 4 * MINUTE).status).toBe('warm')
+    expect(cacheView(state, T0 + 5 * MINUTE).status).toBe('cold')
+  })
+
   test('a resumed session starts from its last response', () => {
-    const state = resumed(INITIAL_CACHE, T0 - 5 * MINUTE, 90_000, 'claude-opus-5-5')
+    const state = resumed({ ...INITIAL_CACHE, ttl: '1h' }, T0 - 5 * MINUTE, 90_000, 'claude-opus-5-5')
     expect(cacheView(state, T0).leftMs).toBe(55 * MINUTE)
     expect(state.tokens).toBe(90_000)
   })
@@ -76,5 +135,34 @@ describe('cache', () => {
   test('a model the price table does not know has no price', () => {
     expect(costOf('some-other-model', 1000, '1h')).toBeNull()
     expect(cacheView(afterResponse(INITIAL_CACHE, T0, { ...USAGE, model: 'x' }), T0).warmUsd).toBeNull()
+  })
+})
+
+describe('the TTL from the transcript', () => {
+  test('once the turn’s response is written, the transcript says the TTL', async ($, on) => {
+    const { clock, answers, seen } = world(on)
+    await start($, clock)
+    await $.classic.SessionStart({ source: 'startup', transcript_path: '/t/s.jsonl' } as never)
+    await clock.advance(10)
+    await turnStart($)
+    await request($)
+    await $.classic.Stop({ stop_hook_active: false, transcript_path: '/t/s.jsonl' } as never)
+    answers.transcript = transcriptLine('1h')
+    await turnComplete($)
+    await clock.advance(100)
+    expect(await paneText($)).toContain('5m TTL')
+    await clock.advance(600)
+    expect(seen.runs.some(argv => argv[0] === 'tail' && argv.at(-1) === '/t/s.jsonl')).toBe(true)
+    expect(await paneText($)).toContain('1h TTL')
+  })
+
+  test('a resumed session takes its TTL from the transcript straight away', async ($, on) => {
+    const { clock, answers } = world(on)
+    answers.transcript = transcriptLine('1h')
+    await start($, clock)
+    await $.classic.SessionStart({ source: 'resume', transcript_path: '/t/s.jsonl', seconds_since_last_response: 60, context_tokens: 90_000 } as never)
+    await clock.advance(10)
+    expect(await paneText($)).toContain('1h TTL')
+    expect(await paneText($)).toContain('59:')
   })
 })

@@ -35,6 +35,8 @@ export type Answers = {
   theme: string
   /** Paths that no longer exist. */
   gone: Set<string>
+  /** What `tail` reads from the end of the transcript. */
+  transcript: string
 }
 
 type Clock = { advance: (ms: number) => Promise<void>; now: () => number }
@@ -52,6 +54,7 @@ function answerRun(argv: readonly string[], a: Answers): { value: ProcessRunResu
   const args = isPnpx ? rest.slice(1) : rest
   const line = args.join(' ')
   if (exe === 'date') return ran('+0100\n')
+  if (exe === 'tail') return ran(a.transcript)
   if (exe === 'ccusage') {
     if (a.ccusage === 'missing') return { deny: 'spawn ccusage ENOENT' }
     if (a.ccusage === 'failed') return ran('', 1, 'Error: no usage data found\n')
@@ -98,6 +101,7 @@ export function world(on: On, env: Record<string, string> = { HOME, TERM: 'xterm
     zed: 'path',
     theme: 'dark',
     gone: new Set(),
+    transcript: '',
   }
 
   on('command.register', (_$, e) => ({ value: { command: e.name } }))
@@ -152,6 +156,8 @@ export function world(on: On, env: Record<string, string> = { HOME, TERM: 'xterm
     return { result } as never
   })
   on('turn.start', (_$, e) => ({ turnId: e.turnId }))
+  on('classic.SessionStart', () => ({}) as never)
+  on('classic.Stop', () => ({}) as never)
   on('turn.complete', () => ({ text: '' }))
   on('prompt.edit', (_$, e) => ({ text: e.text, cursor: e.cursor }))
   on('turn.step', async function* (_$, e) {

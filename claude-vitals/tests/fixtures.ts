@@ -151,5 +151,11 @@ export const STEP_USAGE = {
   cache_creation_input_tokens: 9_490,
 }
 
+/** A transcript line: a main-thread response that wrote its cache at `ttl`. */
+export function transcriptLine(ttl: '5m' | '1h'): string {
+  const cache_creation = { ephemeral_5m_input_tokens: ttl === '5m' ? 9_490 : 0, ephemeral_1h_input_tokens: ttl === '1h' ? 9_490 : 0 }
+  return JSON.stringify({ type: 'assistant', message: { usage: { cache_creation } } }) + '\n'
+}
+
 /** The patch an Edit returns in these tests: +2 −1, first change at line 12. */
 export const EDIT_HUNK = { oldStart: 10, oldLines: 4, newStart: 10, newLines: 5, lines: [' a', ' b', '-c', '+C', '+D', ' e'] }

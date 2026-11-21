@@ -1,7 +1,8 @@
 export type Theme = 'dark' | 'light'
 export type GraphicsMode = 'pixels' | 'text'
 export type CacheTtl = '5m' | '1h'
-export type TtlSource = 'engine' | 'learned' | 'default'
+/** written: a response's own cache writes said it; engine: a model switch did; learned: guessed from a pause. */
+export type TtlSource = 'written' | 'engine' | 'learned' | 'default'
 
 export type CacheState = {
   /** When the main thread's last model request went out (ms); null before the first. */

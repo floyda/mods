@@ -18,7 +18,7 @@ export const INITIAL_CACHE: CacheState = {
   lastRequestAt: null,
   tokens: 0,
   model: null,
-  ttl: '1h',
+  ttl: '5m',
   ttlSource: 'default',
   recent: [],
 }
